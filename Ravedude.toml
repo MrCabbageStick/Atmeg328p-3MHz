@@ -1,0 +1,13 @@
+[general]
+
+[board]
+name = "Climate Sensor ATmega328p"
+
+[board.reset]
+automatic = true
+
+[board.avrdude]
+programmer = "usbasp"
+partno = "atmega328p"
+baudrate = -1
+do-chip-erase = true
