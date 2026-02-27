@@ -8,10 +8,11 @@ use panic_halt as _;
 mod local_clock;
 use local_clock::MHz3;
 
-use crate::{local_delay::LocalDelay, power_controlled_bus::ActiveLowPin};
+use crate::{aht20::{Aht20, Aht20MeasurementData}, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin};
 
 mod local_delay;
 mod power_controlled_bus;
+mod aht20;
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -98,37 +99,35 @@ fn main() -> ! {
         }
 
         // Measurement
-        match i2c.write(0x38, &[0xAC, 0x33, 0x00]){
-            Ok(_) => { ufmt::uwrite!(&mut serial, "Send measurement command\r\n").unwrap_infallible() },
-            Err(_) => { ufmt::uwrite!(&mut serial, "Unable to send measurement command\r\n").unwrap_infallible() }
-        };
+        // match i2c.write(0x38, &[0xAC, 0x33, 0x00]){
+        //     Ok(_) => { ufmt::uwrite!(&mut serial, "Send measurement command\r\n").unwrap_infallible() },
+        //     Err(_) => { ufmt::uwrite!(&mut serial, "Unable to send measurement command\r\n").unwrap_infallible() }
+        // };
 
-        delay.delay_ms(500);
+        // delay.delay_ms(500);
 
-        let mut measurement_buffer = [0u8; 7];
+        // let mut measurement_buffer = [0u8; 7];
 
-        match i2c.read(0x38, &mut measurement_buffer){
-            Ok(_) => { 
-                ufmt::uwrite!(&mut serial, "Data read:\r\n").unwrap_infallible();
-                for byte in &measurement_buffer {
-                    ufmt::uwrite!(&mut serial, "{:x} ", *byte).unwrap_infallible();
-                }
-                ufmt::uwrite!(&mut serial, "\r\n").unwrap_infallible();
-            },
-            Err(_) => { ufmt::uwrite!(&mut serial, "Unable to read measurement data\r\n").unwrap_infallible() }
-        };
+        // match i2c.read(0x38, &mut measurement_buffer){
+        //     Ok(_) => { 
+        //         ufmt::uwrite!(&mut serial, "Data read:\r\n").unwrap_infallible();
+        //         for byte in &measurement_buffer {
+        //             ufmt::uwrite!(&mut serial, "{:x} ", *byte).unwrap_infallible();
+        //         }
+        //         ufmt::uwrite!(&mut serial, "\r\n").unwrap_infallible();
+        //     },
+        //     Err(_) => { ufmt::uwrite!(&mut serial, "Unable to read measurement data\r\n").unwrap_infallible() }
+        // };
 
-        let raw_temp = 0u64
-            | ((measurement_buffer[3] as u64 & 0x0f) << 16) 
-            | ((measurement_buffer[4] as u64) << 8) 
-            | measurement_buffer[5] as u64;
+        // let raw_temp = 0i64
+        //     | ((measurement_buffer[3] as i64 & 0x0f) << 16) 
+        //     | ((measurement_buffer[4] as i64) << 8) 
+        //     | measurement_buffer[5] as i64;
 
-        // let temp = (raw_temp as f32 / (1 << 20) as f32) * 200.0 - 50.0;
-        // let temp_whole_number = temp as u32;
-        // let temp_fraction = (temp - temp_whole_number as f32 * 1000.0) as u32;
-        let temp = ((raw_temp * 20000) >> 20) - 5000;
-
-        ufmt::uwrite!(&mut serial, "Temp: {}.{}^C", temp / 100, temp % 100).unwrap_infallible();
+        // // let temp = (raw_temp as f32 / (1 << 20) as f32) * 200.0 - 50.0;
+        // // let temp_whole_number = temp as u32;
+        // // let temp_fraction = (temp - temp_whole_number as f32 * 1000.0) as u32;
+        // let temp = ((raw_temp * 20000) >> 20) - 5000;
     }
 
 
@@ -136,8 +135,15 @@ fn main() -> ! {
 
     loop {
         // ufmt::uwrite!(&mut serial, "Womping...\r\n").unwrap_infallible();
-        delay.delay_ms(1000);
+        let humidity_temp_data = Aht20::measure(&mut i2c, 0x38).unwrap_or(
+            Aht20MeasurementData{ temperature: 0, humidity: 0, crc_passed: false }
+        );
+
+
+        ufmt::uwrite!(&mut serial, "Temp: {}.{}^C\r\n", humidity_temp_data.temperature / 100, humidity_temp_data.temperature % 100).unwrap_infallible();
+        ufmt::uwrite!(&mut serial, "Humidity: {}.{}%\r\n", humidity_temp_data.humidity / 100, humidity_temp_data.humidity % 100).unwrap_infallible();
+        
+        
+        delay.delay_ms(5000);
     }
 }
-
-
