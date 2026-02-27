@@ -15,7 +15,8 @@ impl LocalDelay{
         // 4 cycles is 1,08 us
 
         // Function call overhead is 16 cycles (4.3 us)
-        if us <= 4{ // 3 cycles
+
+        if us < 5 { // 3 cycles
             return; // 4 if true
         }
 
