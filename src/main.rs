@@ -151,7 +151,7 @@ fn main() -> ! {
                 Err(_) => ufmt::uwrite!(&mut serial, "--> Unable to read BMP280 data\r\n").unwrap_infallible(),
                 Ok(data) => {
                     ufmt::uwrite!(&mut serial, "--> Temperature: {}m°C\r\n", data.temperature).unwrap_infallible();
-                    ufmt::uwrite!(&mut serial, "--> Raw pressure: {}\r\n", data.pressure).unwrap_infallible();
+                    ufmt::uwrite!(&mut serial, "--> Pressure: {}Pa\r\n", data.pressure >> 8).unwrap_infallible();
                 }
             }
         }

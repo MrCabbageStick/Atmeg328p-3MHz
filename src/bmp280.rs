@@ -41,7 +41,7 @@ impl Bmp280{
 
         // Config measurements
         let temperature_oversampling = Self::OVERSAMPLING[1];
-        let pressure_oversampling = Self::OVERSAMPLING[1];
+        let pressure_oversampling = Self::OVERSAMPLING[2];
         let power_mode = Self::POWER_MODES[2];
 
         // Register layout:
@@ -55,7 +55,7 @@ impl Bmp280{
             return Err(());
         };
 
-        Ok(Self { address, compensations })
+        Ok(Self { address, compensations})
     }
 
     fn read_compensation_registers(i2c: &mut I2c, address: u8) -> Result<Bmp280Compensations, ()>{
@@ -70,15 +70,15 @@ impl Bmp280{
             dig_t2: i16::from_le_bytes([buffer[2], buffer[3]]),
             dig_t3: i16::from_le_bytes([buffer[4], buffer[5]]),
 
-            dig_p1: 0,
-            dig_p2: 0,
-            dig_p3: 0,
-            dig_p4: 0,
-            dig_p5: 0,
-            dig_p6: 0,
-            dig_p7: 0,
-            dig_p8: 0,
-            dig_p9: 0,
+            dig_p1: u16::from_le_bytes([buffer[6], buffer[7]]),
+            dig_p2: i16::from_le_bytes([buffer[8], buffer[9]]),
+            dig_p3: i16::from_le_bytes([buffer[10], buffer[11]]),
+            dig_p4: i16::from_le_bytes([buffer[12], buffer[13]]),
+            dig_p5: i16::from_le_bytes([buffer[14], buffer[15]]),
+            dig_p6: i16::from_le_bytes([buffer[16], buffer[17]]),
+            dig_p7: i16::from_le_bytes([buffer[18], buffer[19]]),
+            dig_p8: i16::from_le_bytes([buffer[20], buffer[21]]),
+            dig_p9: i16::from_le_bytes([buffer[22], buffer[23]]),
         })
     }
 
@@ -92,11 +92,11 @@ impl Bmp280{
         // Temperature and pressure are 20 bit numbers
         return Ok(Bmp280RawData { 
             temperature: ((buffer[3] as i32) << 12) | ((buffer[4] as i32) << 4) | ((buffer[5] as i32) >> 4), 
-            pressure: ((buffer[0] as u32) << 12) | ((buffer[1] as u32) << 4) | ((buffer[2] as u32) >> 4),
+            pressure: ((buffer[0] as i32) << 12) | ((buffer[1] as i32) << 4) | ((buffer[2] as i32) >> 4),
         })
     }
 
-    pub fn convert_raw_temp(&self, temp: i32) -> i32{
+    pub fn convert_raw_temp(&self, temp: i32) -> (i32, i32){
         let var1 = ((temp >> 3) - ((self.compensations.dig_t1 as i32) << 1)) * ((self.compensations.dig_t2 as i32) >> 11);
         let var2 = (
             (
@@ -105,16 +105,43 @@ impl Bmp280{
                 ) >> 12
             ) * (self.compensations.dig_t3 as i32)
         ) >> 14;
+        let t_fine = var1 + var2;
+        ((t_fine * 5 + 128) >> 8, t_fine)
+    }
 
-        ((var1 + var2) * 5 + 128) >> 8
+    pub fn convert_raw_pressure(&self, pressure: i32, fine_temp: i32) -> u32{
+        let mut var1 = fine_temp as i64 - 128000;
+
+        let mut var2 = var1 * var1 * self.compensations.dig_p6 as i64;
+        var2 += (var1 * self.compensations.dig_p5 as i64) << 17;
+        var2 += (self.compensations.dig_p4 as i64) << 35;
+
+        var1 = (var1 * var1 * ((self.compensations.dig_p3 as i64) >> 8)) + ((var1 * (self.compensations.dig_p2 as i64)) << 12);
+        var1 = ((1i64 << 47) + var1) * (self.compensations.dig_p1 as i64) >> 33;
+
+        if var1 == 0 {
+            return 0;
+        }
+
+        let mut p = 1048576_i64 - pressure as i64;
+        p = (((p << 31) - var2) * 3125) / var1;
+
+        var1 = ((self.compensations.dig_p9 as i64) * (p >> 13) * (p >> 13)) >> 25;
+        var2 = (self.compensations.dig_p8 as i64 * p) >> 19;
+
+        p = ((p + var1 + var2) >> 8) + ((self.compensations.dig_p7 as i64) << 4);
+
+        p as u32
     }
 
     pub fn read_data(&self, i2c: &mut I2c) -> Result<Bmp280Data, ()>{
         let raw = self.read_raw(i2c)?;
         
+        let (temp, fine_temp) = self.convert_raw_temp(raw.temperature);
+
         Ok(Bmp280Data { 
-            temperature: self.convert_raw_temp(raw.temperature), 
-            pressure: raw.pressure,
+            temperature: temp, 
+            pressure: self.convert_raw_pressure(raw.pressure, fine_temp),
         })
     }
 }
@@ -138,7 +165,7 @@ struct Bmp280Compensations{
 
 pub struct Bmp280RawData{
     pub temperature: i32,
-    pub pressure: u32,
+    pub pressure: i32,
 }
 
 pub struct Bmp280Data{
