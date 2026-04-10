@@ -8,11 +8,12 @@ use panic_halt as _;
 mod local_clock;
 use local_clock::MHz3;
 
-use crate::{aht20::{Aht20, Aht20MeasurementData}, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin};
+use crate::{aht20::{Aht20, Aht20MeasurementData}, bmp280::Bmp280, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin};
 
 mod local_delay;
 mod power_controlled_bus;
 mod aht20;
+mod bmp280;
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -131,18 +132,42 @@ fn main() -> ! {
     }
 
 
-
+    let bmp280 = match Bmp280::init(&mut i2c, 0x77){
+        Ok(device) => {
+            ufmt::uwrite!(&mut serial, "Bmp280 initilized\r\n").unwrap_infallible();
+            Some(device)
+        },
+        Err(_) => {
+            ufmt::uwrite!(&mut serial, "Unable to initialize Bmp280\r\n").unwrap_infallible();
+            None
+        }
+    };
 
     loop {
-        // ufmt::uwrite!(&mut serial, "Womping...\r\n").unwrap_infallible();
+        ufmt::uwrite!(&mut serial, "> BMP280\r\n").unwrap_infallible();
+
+        if let Some(device) = &bmp280{
+            match device.read_data(&mut i2c){
+                Err(_) => ufmt::uwrite!(&mut serial, "--> Unable to read BMP280 data\r\n").unwrap_infallible(),
+                Ok(data) => {
+                    ufmt::uwrite!(&mut serial, "--> Temperature: {}m°C\r\n", data.temperature).unwrap_infallible();
+                    ufmt::uwrite!(&mut serial, "--> Raw pressure: {}\r\n", data.pressure).unwrap_infallible();
+                }
+            }
+        }
+
+        ufmt::uwrite!(&mut serial, "> AHT20\r\n").unwrap_infallible();
+        
+        // // ufmt::uwrite!(&mut serial, "Womping...\r\n").unwrap_infallible();
         let humidity_temp_data = Aht20::measure(&mut i2c, 0x38).unwrap_or(
             Aht20MeasurementData{ temperature: 0, humidity: 0, crc_passed: false }
         );
 
 
-        ufmt::uwrite!(&mut serial, "Temp: {}.{}^C\r\n", humidity_temp_data.temperature / 100, humidity_temp_data.temperature % 100).unwrap_infallible();
-        ufmt::uwrite!(&mut serial, "Humidity: {}.{}%\r\n", humidity_temp_data.humidity / 100, humidity_temp_data.humidity % 100).unwrap_infallible();
+        ufmt::uwrite!(&mut serial, "--> Temp: {}.{}^C\r\n", humidity_temp_data.temperature / 100, humidity_temp_data.temperature % 100).unwrap_infallible();
+        ufmt::uwrite!(&mut serial, "--> Humidity: {}.{}%\r\n", humidity_temp_data.humidity / 100, humidity_temp_data.humidity % 100).unwrap_infallible();
         
+        ufmt::uwrite!(&mut serial, "\r\n").unwrap_infallible();
         
         delay.delay_ms(5000);
     }
