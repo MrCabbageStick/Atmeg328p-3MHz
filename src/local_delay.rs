@@ -1,55 +1,54 @@
 use arduino_hal::hal::delay::Delay;
-
 use crate::local_clock::MHz3;
 use core::arch::asm;
 
 pub struct LocalDelay(Delay<MHz3>);
 
-impl LocalDelay{
+impl LocalDelay {
     pub fn new() -> Self {
         Self(Delay::new())
     }
 
     pub fn delay_us(&mut self, us: u32) {
-        // With 3MHz (3_686_400 Hz) 1 cycle takes ~0,27 us
-        // 4 cycles is 1,08 us
+        if us == 0 { return; }
 
-        // Function call overhead is 16 cycles (4.3 us)
+        // Cycles per microsecond = 3.6864
+        // Our loop below takes exactly 4 cycles per iteration.
+        // Target iterations = us * (3.6864 / 4) = us * 0.9216
+        
+        // Fixed-point math (236/256 ≈ 0.9218)
+        // This math is fast on AVR and very close to the target ratio.
+        let ticks = (us * 189) >> 8;
 
-        if us < 5 { // 3 cycles
-            return; // 4 if true
+        if ticks > 0 {
+            busy_loop_24(ticks);
         }
-
-        // Busy loop takes ~1 us (4 cycles)
-        // us -= 5; 
-
-        let iters = us >> 12;
-        let mut i = 0;
-
-        while i < iters{
-            busy_loop(0xfff);
-            i += 1;
-        }
-
-        busy_loop((us & 0xfff) as u16);
     }
 
     pub fn delay_ms(&mut self, ms: u32) {
-        self.delay_us(ms * 1_000);
+        for _ in 0..ms {
+            self.delay_us(1000);
+        }
     }
 }
 
 #[cfg(target_arch = "avr")]
-#[allow(unused_assignments)]
-/// Assembly loop with n iterations, each taking 4 cycles\
-/// Based on https://github.com/arduino/ArduinoCore-avr/blob/master/cores/arduino/wiring.c
-fn busy_loop(mut n: u16) {
+/// A 24-bit busy loop (supports delays up to ~18 seconds at 3.6MHz)
+/// Each iteration takes exactly 4 cycles.
+fn busy_loop_24(mut n: u32) {
     unsafe {
         asm!(
-            "1:",               // Numeric label 1 
-            "sbiw {n}, 1",      // (2 cycles) Subtract 1 from 16-bit register pair
-            "brne 1b",          // (2 cycles) If output not 0 (Z registry) go to label 1 backward
-            n = inout(reg_iw) n,// Require 16-bit register pair
+            "1:",
+            "subi {0}, 1",      // 1 cycle: Subtract from LSB
+            "sbci {1}, 0",      // 1 cycle: Subtract carry from mid-byte
+            "sbci {2}, 0",      // 1 cycle: Subtract carry from MSB
+            "brne 1b",          // 2 cycles (back to 1) or 1 cycle (exit)
+            inout(reg) n as u8 => _, 
+            inout(reg) (n >> 8) as u8 => _,
+            inout(reg) (n >> 16) as u8 => _,
         );
     }
 }
+
+#[cfg(not(target_arch = "avr"))]
+fn busy_loop_24(_n: u32) {}

@@ -5,8 +5,9 @@
 use core::u16;
 
 use arduino_hal::{hal::usart::Usart, port::{Pin, mode::Output}, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
-use ask433::{driver::{AskDriver, AskMode}, heapless::Vec};
 use panic_halt as _;
+
+use ook_433mhz::{driver::OokDriver, mock_pin::MockPin};
 
 mod local_clock;
 use local_clock::MHz3;
@@ -43,40 +44,23 @@ fn main() -> ! {
 
     let mut delay = LocalDelay::new();
 
-    let mut driver = AskDriver::new(
-        pins.d7.into_output(), 
-        pins.a0.into_pull_up_input(), 
-        None::<Pin<Output>>, 
-        4, 
-        None, 
-        None
-    );
+    let mut driver = OokDriver::new(pins.d7.into_output(), MockPin::new());
 
     let mut counter = 0u16;
-    let mut data = [((counter >> 8) & 0xf) as u8, (counter & 0xf) as u8];
 
     ufmt::uwrite!(&mut serial, "Ready :3\r\n").unwrap_infallible();
 
     loop {
         driver.tick();
-        delay.delay_us(100);
+        delay.delay_ms(10);
 
-        if matches!(driver.mode, AskMode::Idle){
-            // Why do i have to do this?
-            driver.tx_buf.clear();
-
-            ufmt::uwrite!(&mut serial, "Sending data: {}\r\n", counter).unwrap_infallible();
-
-            let data = Vec::from_slice(&[((counter >> 8) & 0xf) as u8, (counter & 0xf) as u8]).unwrap();
-            driver.send(data);
-
+        if driver.is_idle(){
+            delay.delay_ms(3000);
             counter += 1;
+
+            ufmt::uwrite!(&mut serial, "Sending new data: {}\r\n", counter).unwrap_infallible();
+
+            driver.send(&counter.to_le_bytes());
         }
-        // if driver.send(Vec::from_slice(&data).unwrap()) {
-        //     ufmt::uwrite!(&mut serial, "Sending data: {} -> [{}, {}]\r\n", counter, data[0], data[1]).unwrap_infallible();
-        //     counter += 1;
-        //     data = [((counter >> 8) & 0xf) as u8, (counter & 0xf) as u8];
-        // }
-        
     }
 }
