@@ -13,6 +13,7 @@ use crate::{aht20::{Aht20, Aht20MeasurementData}, local_delay::LocalDelay, power
 mod local_delay;
 mod power_controlled_bus;
 mod aht20;
+mod veml7700;
 
 #[arduino_hal::entry]
 fn main() -> ! {
