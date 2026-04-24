@@ -1,4 +1,5 @@
-use arduino_hal::{I2c, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
+use arduino_hal::{I2c, clock::MHz8, hal::delay::Delay, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
+use embedded_hal::delay::DelayNs;
 
 use crate::local_delay::LocalDelay;
 
@@ -6,8 +7,6 @@ use crate::local_delay::LocalDelay;
 pub struct Veml7700{
     address: u8,
 }
-
-
 
 impl Veml7700{
     pub fn new(address: u8) -> Self{ Self{ address } }
@@ -28,7 +27,7 @@ impl Veml7700{
             let msb = (cmd >> 8) as u8;
 
             i2c.write(self.address, &[reg, lsb, msb])?;
-            LocalDelay::new().delay_ms(10);
+            Delay::<MHz8>::new().delay_ms(10);
         }
 
         Ok(())

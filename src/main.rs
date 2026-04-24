@@ -2,8 +2,10 @@
 #![no_main]
 #![feature(asm_experimental_arch)]
 
-use arduino_hal::{I2c, hal::usart::{Usart}, prelude::{_embedded_hal_blocking_i2c_Read, _embedded_hal_blocking_i2c_Write, _unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
+use arduino_hal::{I2c, hal::{delay::Delay, usart::Usart}, prelude::{_embedded_hal_blocking_i2c_Read, _embedded_hal_blocking_i2c_Write, _unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
+use embedded_hal::delay::DelayNs;
 use panic_halt as _;
+use arduino_hal::hal::clock::MHz8;
 
 mod local_clock;
 use local_clock::MHz3;
@@ -36,10 +38,11 @@ fn main() -> ! {
         dp.USART0, 
         pins.d0, 
         pins.d1.into_output(),
-        Baudrate::<MHz3>::new(9600)
+        Baudrate::<MHz8>::new(9600)
     );
 
-    let mut delay = LocalDelay::new();
+    // let mut delay = LocalDelay::new();
+    let mut delay = Delay::<MHz8>::new();
 
     // let mut i2c = I2c::with_external_pullup(
     //     dp.TWI, 
