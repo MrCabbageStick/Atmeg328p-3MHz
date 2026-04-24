@@ -1,9 +1,13 @@
 use arduino_hal::{I2c, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
 
+use crate::local_delay::LocalDelay;
+
 
 pub struct Veml7700{
     address: u8,
 }
+
+
 
 impl Veml7700{
     pub fn new(address: u8) -> Self{ Self{ address } }
@@ -14,10 +18,18 @@ impl Veml7700{
         const COMMAND_02: u16 = 0b0;
         const COMMAND_03: u16 = 0b0000000000000_00_1;
 
-        i2c.write(self.address, &[0, (COMMAND_00 & 0x0f) as u8, ((COMMAND_00 & 0xf0) >> 8) as u8])?;
-        i2c.write(self.address, &[1, (COMMAND_01 & 0x0f) as u8, ((COMMAND_01 & 0xf0) >> 8) as u8])?;
-        i2c.write(self.address, &[2, (COMMAND_02 & 0x0f) as u8, ((COMMAND_02 & 0xf0) >> 8) as u8])?;
-        i2c.write(self.address, &[3, (COMMAND_03 & 0x0f) as u8, ((COMMAND_03 & 0xf0) >> 8) as u8])?;
+        for (reg, cmd) in [
+            (0x00, COMMAND_00),
+            (0x01, COMMAND_01),
+            (0x02, COMMAND_02),
+            (0x03, COMMAND_03),
+        ] {
+            let lsb = (cmd & 0xFF) as u8;
+            let msb = (cmd >> 8) as u8;
+
+            i2c.write(self.address, &[reg, lsb, msb])?;
+            LocalDelay::new().delay_ms(10);
+        }
 
         Ok(())
     }
@@ -29,13 +41,12 @@ impl Veml7700{
 
         let raw = u16::from_le_bytes([buffer[0], buffer[1]]);
 
-        Ok(Self::convert(raw))
+        Ok(Self::raw_to_lux(raw))
     }
 
-    pub fn convert(raw: u16) -> u32{
-        const MULTIPLIER: u32 = 1000;
-
-        // (OUTPUT_DATA / ALS sensitivity) * (10 / IT [ms])
-        ((raw as u32) * MULTIPLIER / 42) / (600 / 10 * MULTIPLIER) / MULTIPLIER
+    fn raw_to_lux(raw: u16) -> u32{
+        // Scaled conversion function from datasheet
+        // Scaled to avoid floating point arithmatics
+        (raw as u32 * 42) / 1000
     }
 }
