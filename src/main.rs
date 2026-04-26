@@ -1,21 +1,13 @@
-#![no_std]
+// #![no_std]
 #![no_main]
-#![feature(asm_experimental_arch)]
+// #![feature(asm_experimental_arch)]
+use battery_free_climat_sensor::*;
 
-use arduino_hal::{I2c, hal::{delay::Delay, usart::Usart}, prelude::{_embedded_hal_blocking_i2c_Read, _embedded_hal_blocking_i2c_Write, _unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
+use arduino_hal::{I2c, hal::{delay::Delay, usart::Usart}, prelude::{_unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
+use battery_free_climat_sensor::{drivers::veml7700::{config::ConfigFastLowPower, driver::Veml7700}, power_controlled_bus::ActiveLowPin};
 use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
-
-mod local_clock;
-use local_clock::MHz3;
-
-use crate::{aht20::{Aht20, Aht20MeasurementData}, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin, veml7700::{config::ConfigFastLowPower, veml7700::Veml7700}};
-
-mod local_delay;
-mod power_controlled_bus;
-mod aht20;
-mod veml7700;
 
 #[arduino_hal::entry]
 fn main() -> ! {

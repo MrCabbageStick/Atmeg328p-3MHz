@@ -3,7 +3,7 @@ use core::marker::PhantomData;
 use arduino_hal::{I2c, clock::MHz8, hal::delay::Delay, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
 use embedded_hal::delay::DelayNs;
 
-use crate::veml7700::config::Config;
+use super::config::Config;
 
 const VALUE_REGISTER_INDEX: u8 = 0x05;
 
