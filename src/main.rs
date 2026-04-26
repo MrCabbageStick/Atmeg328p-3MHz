@@ -2,13 +2,12 @@
 #![no_main]
 #![feature(asm_experimental_arch)]
 
-use arduino_hal::{I2c, hal::{clock::MHz8, usart::Usart}, prelude::{_embedded_hal_blocking_i2c_Read, _embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead, _unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
+use arduino_hal::{I2c, hal::{clock::MHz8, usart::Usart}, prelude::{_unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
 use panic_halt as _;
 
 mod local_clock;
-use local_clock::MHz3;
 
-use crate::{aht20::{Aht20, Aht20MeasurementData}, bmp280::Bmp280, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin};
+use crate::{bmp280::Bmp280, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin};
 
 mod local_delay;
 mod power_controlled_bus;
@@ -47,12 +46,6 @@ fn main() -> ! {
         pins.a5.into_floating_input(), 
         50_000
     );
-
-    let mut buff = [0u8; 1];
-    match i2c.write_read(0x77, &[0xD0], &mut buff){
-        Ok(_) => ufmt::uwrite!(&mut serial, "{:x}\r\n", buff[0]).unwrap_infallible(),
-        Err(e) => ufmt::uwrite!(&mut serial, "{:?}\r\n", e).unwrap_infallible(),
-    }
 
     let bmp280 = match Bmp280::init(&mut i2c, 0x77){
         Ok(device) => {
