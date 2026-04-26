@@ -32,13 +32,6 @@ impl Bmp280{
         let iir_filter = Self::IIR_FILTER[0];
         let isp_3wire_setting = 0u8;
 
-        // Register layout:
-        // | 3 bit standby setting | 3 bit iir filter setting | 1 bit space | 1 bit isp setting |
-        let config_register_value = (normal_mode_standby_time << 5) | (iir_filter << 2) | isp_3wire_setting;
-        if i2c.write(address, &[Self::CONFIG_REGISTER_ADDRESS, config_register_value]).is_err(){
-            return Err(());
-        }
-
         // Config measurements
         let temperature_oversampling = Self::OVERSAMPLING[1];
         let pressure_oversampling = Self::OVERSAMPLING[2];
@@ -48,6 +41,13 @@ impl Bmp280{
         // | 3 bit temp oversampling | 3 bit pressure oversampling | 2 bit power mode |
         let ctrl_meas_register_val = (temperature_oversampling << 5) | (pressure_oversampling << 2) | power_mode;
         if i2c.write(address, &[Self::CTRL_MEAS_REGISTER_ADDRESS, ctrl_meas_register_val]).is_err(){
+            return Err(());
+        }
+
+        // Register layout:
+        // | 3 bit standby setting | 3 bit iir filter setting | 1 bit space | 1 bit isp setting |
+        let config_register_value = (normal_mode_standby_time << 5) | (iir_filter << 2) | isp_3wire_setting;
+        if i2c.write(address, &[Self::CONFIG_REGISTER_ADDRESS, config_register_value]).is_err(){
             return Err(());
         }
 
@@ -97,7 +97,8 @@ impl Bmp280{
     }
 
     pub fn convert_raw_temp(&self, temp: i32) -> (i32, i32){
-        let var1 = ((temp >> 3) - ((self.compensations.dig_t1 as i32) << 1)) * ((self.compensations.dig_t2 as i32) >> 11);
+        let var1 = (((temp >> 3) - ((self.compensations.dig_t1 as i32) << 1)) 
+           * (self.compensations.dig_t2 as i32)) >> 11;
         let var2 = (
             (
                 (
@@ -110,26 +111,24 @@ impl Bmp280{
     }
 
     pub fn convert_raw_pressure(&self, pressure: i32, fine_temp: i32) -> u32{
-        let mut var1 = fine_temp as i64 - 128000;
+        let c = &self.compensations;
 
-        let mut var2 = var1 * var1 * self.compensations.dig_p6 as i64;
-        var2 += (var1 * self.compensations.dig_p5 as i64) << 17;
-        var2 += (self.compensations.dig_p4 as i64) << 35;
-
-        var1 = (var1 * var1 * ((self.compensations.dig_p3 as i64) >> 8)) + ((var1 * (self.compensations.dig_p2 as i64)) << 12);
-        var1 = ((1i64 << 47) + var1) * (self.compensations.dig_p1 as i64) >> 33;
+        let mut var1: i64 = (fine_temp as i64) - 128000;
+        let mut var2: i64 = var1 * var1 * (c.dig_p6 as i64);
+        var2 = var2 + ((var1 * (c.dig_p5 as i64)) << 17);
+        var2 = var2 + ((c.dig_p4 as i64) << 35);
+        var1 = ((var1 * var1 * (c.dig_p3 as i64)) >> 8) + ((var1 * (c.dig_p2 as i64)) << 12);
+        var1 = ((((1i64 << 47) + var1)) * (c.dig_p1 as i64)) >> 33;
 
         if var1 == 0 {
-            return 0;
+            return 0; // avoid division by zero
         }
 
-        let mut p = 1048576_i64 - pressure as i64;
+        let mut p: i64 = 1048576 - (pressure as i64);
         p = (((p << 31) - var2) * 3125) / var1;
-
-        var1 = ((self.compensations.dig_p9 as i64) * (p >> 13) * (p >> 13)) >> 25;
-        var2 = (self.compensations.dig_p8 as i64 * p) >> 19;
-
-        p = ((p + var1 + var2) >> 8) + ((self.compensations.dig_p7 as i64) << 4);
+        var1 = ((c.dig_p9 as i64) * (p >> 13) * (p >> 13)) >> 25;
+        var2 = ((c.dig_p8 as i64) * p) >> 19;
+        p = ((p + var1 + var2) >> 8) + ((c.dig_p7 as i64) << 4);
 
         p as u32
     }
