@@ -60,8 +60,12 @@ pub trait Config{
     type It: AlsIt;
     type Psm: AlsPsm;
 
-    /// Value of register 0x00
+    /// Values of registers
     const BITS_0x00: u16 = Self::Sm::BITS << SM_OFFSET | Self::It::BITS << IT_OFFSET;
+    const BITS_0x03: u16 = Self::Psm::BITS << PSM_OFFSET | 0b1 << PSM_EN_OFFSET;
+    // Registers 0x01 and 0x02 are unused
+    const BITS_0x01: u16 = 0;
+    const BITS_0x02: u16 = 0;
 
     /// Lux calculation numerator
     const LUX_NUM: u32;
