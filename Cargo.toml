@@ -5,6 +5,11 @@ authors = ["daniel.wiszniowski <mrcabbagestick@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
+[lib]
+name = "battery_free_climat_sensor"
+test = false
+bench = false
+
 [[bin]]
 name = "battery-free-climat-sensor"
 test = false

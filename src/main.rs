@@ -1,13 +1,13 @@
-// #![no_std]
+#![no_std]
 #![no_main]
-// #![feature(asm_experimental_arch)]
-use battery_free_climat_sensor::*;
+#![feature(asm_experimental_arch)]
 
 use arduino_hal::{I2c, hal::{delay::Delay, usart::Usart}, prelude::{_unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
-use battery_free_climat_sensor::{drivers::veml7700::{config::ConfigFastLowPower, driver::Veml7700}, power_controlled_bus::ActiveLowPin};
 use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
+
+use battery_free_climat_sensor::{drivers::veml7700::{config::ConfigFastLowPower, driver::Veml7700}, power_controlled_bus::ActiveLowPin};
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -33,15 +33,8 @@ fn main() -> ! {
         Baudrate::<MHz8>::new(9600)
     );
 
-    // let mut delay = LocalDelay::new();
     let mut delay = Delay::<MHz8>::new();
 
-    // let mut i2c = I2c::with_external_pullup(
-    //     dp.TWI, 
-    //     pins.a4.into_floating_input(), 
-    //     pins.a5.into_floating_input(), 
-    //     50_000
-    // );
     let mut i2c = I2c::with_external_pullup(
         dp.TWI, 
         pins.a4.into_floating_input(), 
