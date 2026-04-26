@@ -4,7 +4,8 @@
 
 use core::u16;
 
-use arduino_hal::{hal::usart::Usart, port::{Pin, mode::Output}, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
+use arduino_hal::{hal::{clock::MHz8, delay::Delay, usart::Usart}, port::{Pin, mode::Output}, prelude::{_unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
+use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 
 use ook_433mhz::{driver::OokDriver, mock_pin::MockPin};
@@ -39,10 +40,10 @@ fn main() -> ! {
         dp.USART0, 
         pins.d0, 
         pins.d1.into_output(),
-        Baudrate::<MHz3>::new(9600)
+        Baudrate::<MHz8>::new(9600)
     );
 
-    let mut delay = LocalDelay::new();
+    let mut delay = Delay::<MHz8>::new();
 
     let mut driver = OokDriver::new(pins.d7.into_output(), MockPin::new());
 

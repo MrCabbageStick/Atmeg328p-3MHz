@@ -15,7 +15,7 @@ panic-halt = "1.0.0"
 ufmt = "0.2.0"
 nb = "1.1.0"
 ask433 = { git = "https://github.com/MrCabbageStick/ask433.git", branch = "embedded-hal-v0.2.7", version = "0.2.1" }
-embedded-hal = "0.2.7"
+embedded-hal = "1.0.0"
 ook-433mhz = { version = "0.1.0", path = "../OOK_433MHz" }
 
 [dependencies.arduino-hal]

@@ -463,7 +463,7 @@ version = "0.1.0"
 dependencies = [
  "arduino-hal",
  "ask433",
- "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0",
  "nb 1.1.0",
  "ook-433mhz",
  "panic-halt",
