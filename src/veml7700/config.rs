@@ -60,7 +60,7 @@ pub trait Config{
     type It: AlsIt;
     type Psm: AlsPsm;
 
-    /// Values of registers
+    // Values of registers
     const BITS_0x00: u16 = Self::Sm::BITS << SM_OFFSET | Self::It::BITS << IT_OFFSET;
     const BITS_0x03: u16 = Self::Psm::BITS << PSM_OFFSET | 0b1 << PSM_EN_OFFSET;
     // Registers 0x01 and 0x02 are unused
