@@ -10,7 +10,7 @@ use arduino_hal::hal::clock::MHz8;
 mod local_clock;
 use local_clock::MHz3;
 
-use crate::{aht20::{Aht20, Aht20MeasurementData}, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin, veml7700::Veml7700};
+use crate::{aht20::{Aht20, Aht20MeasurementData}, local_delay::LocalDelay, power_controlled_bus::ActiveLowPin, veml7700::{config::ConfigFastLowPower, veml7700::Veml7700}};
 
 mod local_delay;
 mod power_controlled_bus;
@@ -59,7 +59,8 @@ fn main() -> ! {
 
     ufmt::uwrite!(&mut serial, "--------------------------\r\n").unwrap_infallible();
 
-    let veml7700 = Veml7700::new(0x10);
+    let veml7700 = Veml7700::<ConfigFastLowPower>::new(0x10);
+    
     match veml7700.init(&mut i2c){
         Ok(_) => ufmt::uwrite!(&mut serial, "VEML7700 initialized\r\n").unwrap_infallible(),
         Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize VEML7700: \n{:?}\r\n", e).unwrap_infallible()
