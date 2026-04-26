@@ -1,12 +1,17 @@
 [package]
-name = "maybe-this-will-work"
+name = "battery-free-climat-sensor"
 version = "0.1.0"
 authors = ["daniel.wiszniowski <mrcabbagestick@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 
+[lib]
+name = "battery_free_climat_sensor"
+test = false
+bench = false
+
 [[bin]]
-name = "maybe-this-will-work"
+name = "battery-free-climat-sensor"
 test = false
 bench = false
 
