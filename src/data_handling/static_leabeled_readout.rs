@@ -13,6 +13,21 @@ impl<ID: SensorId, SCALE: UnitScale, TYPE: SensorType> TypedLabelReadout<ID, SCA
         | (TYPE::BITS & 0b1111);
 
     pub fn new(data: u32) -> Self { Self {data, _label: PhantomData} }
+
+    pub fn from_bytes(bytes: [u8; 5]) -> Result<Self, ()>{
+        let label = bytes[0];
+
+        // Check if label is correct
+        if !(
+            (label >> 6) == ID::BITS
+            && (label >> 4) & 0b11 == SCALE::BITS
+            && (label & 0b1111) == TYPE::BITS
+        ){
+            return Err(())
+        }
+
+        Ok(Self::new(u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]])))
+    }
 }
 
 impl<ID: SensorId, SCALE: UnitScale, TYPE: SensorType> LabeledReadout<5> for TypedLabelReadout<ID, SCALE, TYPE>{
@@ -75,3 +90,22 @@ impl SensorType for Thermometer{ const BITS: u8 = 0b0000; }
 impl SensorType for Higrometer{ const BITS: u8 = 0b0001; }
 impl SensorType for Barometer{ const BITS: u8 = 0b0010; }
 impl SensorType for Luxmeter{ const BITS: u8 = 0b0011; }
+
+
+#[cfg(test)]
+mod tests{
+    use crate::data_handling::{labeled_readout::LabeledReadout, static_leabeled_readout::{SensorId0, Thermometer, TypedLabelReadout, UnitScale1}};
+
+    #[test]
+    fn from_bytes(){
+        let data_in = TypedLabelReadout::new::<SensorId0, UnitScale1, Thermometer>(0xffeeddcc);
+        let bytes = data_in.get_bytes();
+
+        let data_out = TypedLabelReadout::<SensorId0, UnitScale1, Thermometer>::from_bytes(bytes);
+
+        assert!(matches!(data_out, Ok(_)), "Correctly byte encoded readout cannot be parsed");
+        
+        let unwrapped = data_out.unwrap();
+        assert!(unwrapped.data == data_in.data, "Data in decoded readout is different from encoded one: ({:x} vs {:x})", unwrapped.data, data_in.data);
+    }
+}
