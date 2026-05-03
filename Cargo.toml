@@ -20,6 +20,7 @@ panic-halt = "1.0.0"
 ufmt = "0.2.0"
 nb = "1.1.0"
 embedded-hal = "1.0"
+ook-433mhz = { git = "https://github.com/MrCabbageStick/OOK-433MHz.git", rev = "e0b28f7", version = "0.1.0" }
 
 [dependencies.arduino-hal]
 git = "https://github.com/rahix/avr-hal"
