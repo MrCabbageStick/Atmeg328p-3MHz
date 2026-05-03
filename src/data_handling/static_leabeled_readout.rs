@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use crate::data_handling::labeled_readout::LabeledReadout;
+use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_OFFSET, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_OFFSET}};
 
 pub struct TypedLabelReadout<ID, SCALE, TYPE>{
     data: u32,
@@ -8,9 +8,9 @@ pub struct TypedLabelReadout<ID, SCALE, TYPE>{
 }
 
 impl<ID: SensorId, SCALE: UnitScale, TYPE: SensorType> TypedLabelReadout<ID, SCALE, TYPE> {
-    const LABEL: u8 = ID::BITS << 6
-        | (SCALE::BITS & 0b11) << 4
-        | (TYPE::BITS & 0b1111);
+    const LABEL: u8 = ID::BITS << SENSOR_ID_OFFSET
+        | (SCALE::BITS & 0b11) << UNIT_SCALE_OFFSET
+        | (TYPE::BITS & 0b1111) << SENSOR_TYPE_OFFSET;
 
     pub fn new(data: u32) -> Self { Self {data, _label: PhantomData} }
 
@@ -86,10 +86,10 @@ pub struct Higrometer;
 pub struct Barometer;
 pub struct Luxmeter;
 
-impl SensorType for Thermometer{ const BITS: u8 = 0b0000; }
-impl SensorType for Higrometer{ const BITS: u8 = 0b0001; }
-impl SensorType for Barometer{ const BITS: u8 = 0b0010; }
-impl SensorType for Luxmeter{ const BITS: u8 = 0b0011; }
+impl SensorType for Thermometer{ const BITS: u8 = THERMOMETER_SENSOR_TYPE; }
+impl SensorType for Higrometer{ const BITS: u8 = HIGROMETER_SENSOR_TYPE; }
+impl SensorType for Barometer{ const BITS: u8 = BAROMETER_SENSOR_TYPE; }
+impl SensorType for Luxmeter{ const BITS: u8 = LUXMETER_SENSOR_TYPE; }
 
 
 #[cfg(test)]
