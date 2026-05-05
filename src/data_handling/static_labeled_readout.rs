@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_OFFSET, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_OFFSET}};
+use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_MASK, SENSOR_ID_OFFSET, SENSOR_TYPE_MASK, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_MASK, UNIT_SCALE_OFFSET}};
 
 pub struct TypedLabelReadout<ID, SCALE, TYPE>{
     data: u32,
@@ -8,9 +8,10 @@ pub struct TypedLabelReadout<ID, SCALE, TYPE>{
 }
 
 impl<ID: SensorId, SCALE: UnitScale, TYPE: SensorType> TypedLabelReadout<ID, SCALE, TYPE> {
-    const LABEL: u8 = ID::BITS << SENSOR_ID_OFFSET
-        | (SCALE::BITS & 0b11) << UNIT_SCALE_OFFSET
-        | (TYPE::BITS & 0b1111) << SENSOR_TYPE_OFFSET;
+    const LABEL: u8 = 
+        (ID::BITS & SENSOR_ID_MASK) << SENSOR_ID_OFFSET
+        | (SCALE::BITS & UNIT_SCALE_MASK) << UNIT_SCALE_OFFSET
+        | (TYPE::BITS & SENSOR_TYPE_MASK) << SENSOR_TYPE_OFFSET;
 
     pub fn new(data: u32) -> Self { Self {data, _label: PhantomData} }
 
@@ -19,9 +20,9 @@ impl<ID: SensorId, SCALE: UnitScale, TYPE: SensorType> TypedLabelReadout<ID, SCA
 
         // Check if label is correct
         if !(
-            (label >> 6) == ID::BITS
-            && (label >> 4) & 0b11 == SCALE::BITS
-            && (label & 0b1111) == TYPE::BITS
+            (label >> SENSOR_ID_OFFSET) & SENSOR_ID_MASK == ID::BITS
+            && (label >> UNIT_SCALE_OFFSET) & UNIT_SCALE_MASK == SCALE::BITS
+            && (label >> SENSOR_TYPE_OFFSET) & SENSOR_TYPE_MASK == TYPE::BITS
         ){
             return Err(())
         }

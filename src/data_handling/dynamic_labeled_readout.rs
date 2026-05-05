@@ -1,4 +1,4 @@
-use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_OFFSET, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_OFFSET}};
+use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_MASK, SENSOR_ID_OFFSET, SENSOR_TYPE_MASK, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_MASK, UNIT_SCALE_OFFSET}};
 
 pub struct DynamicLabeledReadout{
     data: u32,
@@ -10,9 +10,9 @@ pub struct DynamicLabeledReadout{
 
 impl DynamicLabeledReadout{
     pub fn new_labeled_data(label: u8, data: u32) -> Option<Self>{
-        let sensor_type = SensorType::from_bits((label & 0b1111) >> SENSOR_TYPE_OFFSET)?;
-        let sensor_id = (label & 0b11) >> SENSOR_ID_OFFSET;
-        let unit_scale = (label & 0b11) >> UNIT_SCALE_OFFSET;
+        let sensor_type = SensorType::from_bits((label & SENSOR_TYPE_MASK) >> SENSOR_TYPE_OFFSET)?;
+        let sensor_id = (label & SENSOR_ID_MASK) >> SENSOR_ID_OFFSET;
+        let unit_scale = (label & UNIT_SCALE_MASK) >> UNIT_SCALE_OFFSET;
 
         Some(Self{sensor_id, sensor_type, unit_scale, data, label})
     }
