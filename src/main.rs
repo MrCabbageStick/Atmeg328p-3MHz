@@ -8,7 +8,7 @@ use ook_433mhz::{driver::OokDriver, mock_pin::MockPin};
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
 
-use battery_free_climat_sensor::{data_handling::{labeled_readout::LabeledReadout, static_leabeled_readout::{SensorId0, Thermometer, TypedLabelReadout, UnitScale1}}, drivers::{bmp280::Bmp280, veml7700::{config::ConfigFastLowPower, driver::Veml7700}}, power_controlled_bus::ActiveLowPin};
+use battery_free_climat_sensor::{data_handling::{labeled_readout::LabeledReadout, static_labeled_readout::{SensorId0, Thermometer, TypedLabelReadout, UnitScale1}}, drivers::{bmp280::Bmp280, veml7700::{config::ConfigFastLowPower, driver::Veml7700}}, power_controlled_bus::ActiveLowPin};
 
 #[arduino_hal::entry]
 fn main() -> ! {

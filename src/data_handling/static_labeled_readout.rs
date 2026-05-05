@@ -94,7 +94,7 @@ impl SensorType for Luxmeter{ const BITS: u8 = LUXMETER_SENSOR_TYPE; }
 
 #[cfg(test)]
 mod tests{
-    use crate::data_handling::{labeled_readout::LabeledReadout, static_leabeled_readout::{SensorId0, Thermometer, TypedLabelReadout, UnitScale1}};
+    use crate::data_handling::{labeled_readout::LabeledReadout, static_labeled_readout::{SensorId0, Thermometer, TypedLabelReadout, UnitScale1}};
 
     #[test]
     fn from_bytes(){
