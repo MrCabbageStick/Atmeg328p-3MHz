@@ -117,6 +117,7 @@ name = "battery-free-climat-sensor"
 version = "0.1.0"
 dependencies = [
  "arduino-hal",
+ "avr-device",
  "embedded-hal 1.0.0",
  "nb 1.1.0",
  "panic-halt",

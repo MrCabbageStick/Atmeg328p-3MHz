@@ -2,7 +2,7 @@
 #![no_main]
 #![feature(asm_experimental_arch)]
 
-use arduino_hal::{I2c, hal::{delay::Delay, usart::Usart}, prelude::{_unwrap_infallible_UnwrapInfallible}, usart::Baudrate};
+use arduino_hal::{I2c, Peripherals, hal::{delay::Delay, usart::Usart}, pac::tc1, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
 use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
@@ -35,54 +35,32 @@ fn main() -> ! {
 
     let mut delay = Delay::<MHz8>::new();
 
-    let mut i2c = I2c::with_external_pullup(
-        dp.TWI, 
-        pins.a4.into_floating_input(), 
-        pins.a5.into_floating_input(), 
-        50_000
-    );
+
+    let _gm_counter_pin = pins.d5.into_floating_input();
+
+    let tc1 = dp.TC1;
+
+    unsafe {
+        tc1.tccr1a().write(|w| w.wgm1().bits(0b00));
+        tc1.tccr1b().write(|w| {
+            w.wgm1().bits(0b00)
+                .cs1().bits(0b111)
+        });
+        tc1.tcnt1().write(|w| w.bits(0));
+    }
+
 
     ufmt::uwrite!(&mut serial, "--------------------------\r\n").unwrap_infallible();
 
-    let veml7700 = Veml7700::<ConfigFastLowPower>::new(0x10);
-    
-    match veml7700.init(&mut i2c){
-        Ok(_) => ufmt::uwrite!(&mut serial, "VEML7700 initialized\r\n").unwrap_infallible(),
-        Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize VEML7700: \n{:?}\r\n", e).unwrap_infallible()
-    }
-
-    let bmp280 = match Bmp280::init(&mut i2c, 0x77){
-        Ok(device) => {
-            ufmt::uwrite!(&mut serial, "Bmp280 initilized\r\n").unwrap_infallible();
-            Some(device)
-        },
-        Err(_) => {
-            ufmt::uwrite!(&mut serial, "Unable to initialize Bmp280\r\n").unwrap_infallible();
-            None
-        }
-    };
-
-    delay.delay_ms(100);
-
     loop {
-        
-        match veml7700.read(&mut i2c){
-            Ok(lx) => ufmt::uwrite!(&mut serial, "Light sensor: {} lx\r\n", lx).unwrap_infallible(),
-            Err(_) => ufmt::uwrite!(&mut serial, "Unable to read light sensor data\r\n").unwrap_infallible()
-        }
-
-        if let Some(device) = &bmp280{
-            ufmt::uwrite!(&mut serial, "- BMP280 data:\r\n").unwrap_infallible();
-
-            match device.read_data(&mut i2c){
-                Err(_) => ufmt::uwrite!(&mut serial, "--> Unable to read BMP280 data\r\n").unwrap_infallible(),
-                Ok(data) => {
-                    ufmt::uwrite!(&mut serial, "--> Temperature: {}m°C\r\n", data.temperature).unwrap_infallible();
-                    ufmt::uwrite!(&mut serial, "--> Pressure: {}Pa\r\n", data.pressure >> 8).unwrap_infallible();
-                }
-            }
-        }
-        
         delay.delay_ms(1000);
+
+        let count = avr_device::interrupt::free(|_| unsafe {
+            let val = tc1.tcnt1().read().bits();
+            tc1.tcnt1().write(|w| w.bits(0));
+            val
+        });
+
+        ufmt::uwrite!(&mut serial, "Count: {}p/s\r\n", count).unwrap_infallible();
     }
 }
