@@ -2,17 +2,22 @@
 #![no_main]
 #![feature(asm_experimental_arch)]
 
-use arduino_hal::{I2c, Peripherals, hal::{delay::Delay, usart::Usart}, pac::tc1, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
+use arduino_hal::{Adc, I2c, Peripherals, hal::{delay::Delay, usart::Usart}, pac::tc1, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
 use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
 
-use battery_free_climat_sensor::{drivers::{aht20::Aht20, bmp280::{config::DefaultConfig, driver::Bmp280}, geiger_counter::GeigerCounter, veml7700::{config::ConfigFastLowPower, driver::Veml7700}}, power_controlled_bus::ActiveLowPin, util::{split_fixed_point, timer::{millis, millis_init}}};
+use battery_free_climat_sensor::{drivers::{aht20::Aht20, bmp280::{config::DefaultConfig, driver::Bmp280}, geiger_counter::GeigerCounter, veml7700::{config::ConfigFastLowPower, driver::Veml7700}}, power_controlled_bus::ActiveLowPin, resistor_divider::read_voltage_divider_mv, util::{split_fixed_point, timer::{millis, millis_init}}};
 
 #[arduino_hal::entry]
 fn main() -> ! {
     let dp = arduino_hal::Peripherals::take().unwrap();
     let pins = arduino_hal::pins!(dp);
+    let mut adc = Adc::new(dp.ADC, Default::default());
+
+    // Pins for reading capacitor voltage level
+    let mut capacitor_vsum_pin = pins.a1.into_analog_input(&mut adc);
+    let mut capacitor_halfv_pin = pins.a0.into_analog_input(&mut adc);
 
     // Enable power to all devices
     let mut en_vcc_i2c = ActiveLowPin::from_pin(pins.d8.into_output());
@@ -101,6 +106,12 @@ fn main() -> ! {
                 },
                 Err(e) => ufmt::uwrite!(&mut serial, "Unable to read BMP280 data: {:?}\r\n", e).unwrap_infallible(),
             }
+
+            let v_cap = read_voltage_divider_mv::<100_000,1_000_000,3300,_>(&mut capacitor_vsum_pin, &mut adc);
+            let v_half_cap = read_voltage_divider_mv::<1_000_000,100_000,3300,_>(&mut capacitor_halfv_pin, &mut adc);
+
+            ufmt::uwrite!(&mut serial, "Capacitor1: {}mV\r\n", v_cap - v_half_cap).unwrap_infallible();
+            ufmt::uwrite!(&mut serial, "Capacitor2: {}mV\r\n", v_half_cap).unwrap_infallible();
         }
     }
 }
