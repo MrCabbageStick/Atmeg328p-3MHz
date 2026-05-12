@@ -7,7 +7,7 @@ use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
 
-use battery_free_climat_sensor::{drivers::{bmp280::Bmp280, geiger_counter::{GeigerCounter}, veml7700::{config::ConfigFastLowPower, driver::Veml7700}}, power_controlled_bus::ActiveLowPin, util::timer::{millis, millis_init}};
+use battery_free_climat_sensor::{drivers::{aht20::Aht20, bmp280::Bmp280, geiger_counter::GeigerCounter, veml7700::{config::ConfigFastLowPower, driver::Veml7700}}, power_controlled_bus::ActiveLowPin, util::{split_fixed_point, timer::{millis, millis_init}}};
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -71,6 +71,16 @@ fn main() -> ! {
             match lx_meter.read(&mut i2c){
                 Ok(lx) => ufmt::uwrite!(&mut serial, "Light sensor: {} lx\r\n", lx).unwrap_infallible(),
                 Err(_) => ufmt::uwrite!(&mut serial, "Unable to read light sensor data\r\n").unwrap_infallible()
+            }
+
+            match Aht20::measure(&mut i2c, 0x38){
+                Some(data) => {
+                    let temp = split_fixed_point(data.temperature, 100);
+                    ufmt::uwrite!(&mut serial, "Temperature: {}.{}°C\r\n", temp.0, temp.1).unwrap_infallible();
+                    let humidity = split_fixed_point(data.humidity, 100);
+                    ufmt::uwrite!(&mut serial, "Relative humidity: {}.{}%\r\n", humidity.0, humidity.1).unwrap_infallible();
+                },
+                None => ufmt::uwrite!(&mut serial, "Unable to read Aht20 data\r\n").unwrap_infallible()
             }
         }
     }
