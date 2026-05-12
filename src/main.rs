@@ -25,7 +25,7 @@ fn main() -> ! {
     en_vcc_i2c.set_active();
     en_vcc_rf.set_active();
 
-
+    // Communication
     let mut serial = Usart::new(
         dp.USART0, 
         pins.d0, 
@@ -33,25 +33,26 @@ fn main() -> ! {
         Baudrate::<MHz8>::new(9600)
     );
 
-    let mut delay = Delay::<MHz8>::new();
+    let mut i2c = I2c::with_external_pullup(
+        dp.TWI, 
+        pins.a4.into_floating_input(), 
+        pins.a5.into_floating_input(), 
+        50_000
+    );
 
-    millis_init(dp.TC0);
-
+    // Sensors
     let mut geiger_counter = GeigerCounter::new(dp.TC1);
+    let lx_meter = Veml7700::<ConfigFastLowPower>::new(0x10);
+
+    // Inits
+    match lx_meter.init(&mut i2c){
+        Ok(_) => ufmt::uwrite!(&mut serial, "VEML7700 initialized\r\n").unwrap_infallible(),
+        Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize VEML7700: \n{:?}\r\n", e).unwrap_infallible()
+    }
+
     geiger_counter.init();
 
-    // let _gm_counter_pin = pins.d5.into_floating_input();
-
-    // let tc1 = dp.TC1;
-
-    // unsafe {
-    //     tc1.tccr1a().write(|w| w.wgm1().bits(0b00));
-    //     tc1.tccr1b().write(|w| {
-    //         w.wgm1().bits(0b00)
-    //             .cs1().bits(0b111)
-    //     });
-    //     tc1.tcnt1().write(|w| w.bits(0));
-    // }
+    millis_init(dp.TC0);
 
 
     ufmt::uwrite!(&mut serial, "--------------------------\r\n").unwrap_infallible();
@@ -63,11 +64,14 @@ fn main() -> ! {
 
         if millis() - last_millis >= 1000{
             last_millis = millis();
-            ufmt::uwrite!(&mut serial, "Cpm: {}\r\nSamples: {}\r\n", geiger_counter.cpm(), geiger_counter.seconds_collected()).unwrap_infallible();
+            ufmt::uwrite!(&mut serial, "\r\n--------------- NEW MEASUREMENT ---------------\r\n").unwrap_infallible();
+
+            ufmt::uwrite!(&mut serial, "Cpm: {}\r\n", geiger_counter.cpm()).unwrap_infallible();
+
+            match lx_meter.read(&mut i2c){
+                Ok(lx) => ufmt::uwrite!(&mut serial, "Light sensor: {} lx\r\n", lx).unwrap_infallible(),
+                Err(_) => ufmt::uwrite!(&mut serial, "Unable to read light sensor data\r\n").unwrap_infallible()
+            }
         }
-
-        // let count = geiger_counter_read_and_reset(&tc1);
-
-        // ufmt::uwrite!(&mut serial, "Count: {}p/s\r\n", count).unwrap_infallible();
     }
 }
