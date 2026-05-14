@@ -11,3 +11,5 @@ pub mod power_controlled_bus;
 pub mod resistor_divider;
 
 pub mod util;
+
+pub mod data_handling;
