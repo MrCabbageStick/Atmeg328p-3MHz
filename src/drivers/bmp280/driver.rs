@@ -1,6 +1,7 @@
 use core::{error::Error, fmt::{self, Debug, Display}, marker::PhantomData};
 
-use arduino_hal::{I2c, i2c, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
+use arduino_hal::{Delay, I2c, i2c, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
+use embedded_hal::delay::DelayNs;
 use ufmt::{derive::uDebug, uDebug};
 
 use crate::drivers::bmp280::config::Config;
@@ -28,9 +29,11 @@ impl<CONFIG: Config> Bmp280<CONFIG>{
         Self { address, compensations: None, _config: PhantomData }
     }
 
-    pub fn init(&mut self, i2c: &mut I2c) -> Result<(), i2c::Error>{
+    pub fn init<D: DelayNs>(&mut self, i2c: &mut I2c, delay: &mut D) -> Result<(), i2c::Error>{
         i2c.write(self.address, &[CTRL_MEAS_REGISTER_ADDRESS, Self::CTRL_MEAS_VALUE])?;
         i2c.write(self.address, &[CONFIG_REGISTER_ADDRESS, Self::CONFIG_VALUE])?;
+
+        delay.delay_ms(2);
 
         self.compensations = Some(Bmp280Compensations::read_from_i2c(self.address, i2c)?);
 
@@ -40,7 +43,7 @@ impl<CONFIG: Config> Bmp280<CONFIG>{
     pub fn read_raw(&self, i2c: &mut I2c) -> Result<Bmp280RawData, i2c::Error>{
         let mut buffer = [0u8; 6];
 
-        i2c.write_read(self.address, &[TEMPERATURE_MS_BYTE_ADDRESS], &mut buffer)?;
+        i2c.write_read(self.address, &[PRESSURE_MS_BYTE_ADDRESS], &mut buffer)?;
 
         // Raw temperature are both 20 bit values
         Ok(Bmp280RawData { 
@@ -49,10 +52,54 @@ impl<CONFIG: Config> Bmp280<CONFIG>{
         })
     }
 
+    /// Returns (temperature, fine_temp)
+    fn convert_raw_temp(&self, temp: i32) -> Result<(i32, i32), Bmp280ReadError>{
+        let compensations = self.compensations.as_ref().ok_or(Bmp280ReadError::NotInitialized)?;
+
+        let var1 = (((temp >> 3) - ((compensations.dig_t1 as i32) << 1)) 
+           * (compensations.dig_t2 as i32)) >> 11;
+        let var2 = (
+            (
+                (
+                    ((temp >> 4) - (compensations.dig_t1 as i32)) * ((temp >> 4) - compensations.dig_t1 as i32)
+                ) >> 12
+            ) * (compensations.dig_t3 as i32)
+        ) >> 14;
+
+        let t_fine = var1 + var2;
+
+        Ok(((t_fine * 5 + 128) >> 8, t_fine))
+    }
+
+     pub fn convert_raw_pressure(&self, pressure: i32, fine_temp: i32) -> Result<u32, Bmp280ReadError>{
+        let c = self.compensations.as_ref().ok_or(Bmp280ReadError::NotInitialized)?;
+
+        let mut var1: i64 = (fine_temp as i64) - 128000;
+        let mut var2: i64 = var1 * var1 * (c.dig_p6 as i64);
+        var2 = var2 + ((var1 * (c.dig_p5 as i64)) << 17);
+        var2 = var2 + ((c.dig_p4 as i64) << 35);
+        var1 = ((var1 * var1 * (c.dig_p3 as i64)) >> 8) + ((var1 * (c.dig_p2 as i64)) << 12);
+        var1 = ((((1i64 << 47) + var1)) * (c.dig_p1 as i64)) >> 33;
+
+        if var1 == 0 {
+            return Ok(0); // avoid division by zero
+        }
+
+        let mut p: i64 = 1048576 - (pressure as i64);
+        p = (((p << 31) - var2) * 3125) / var1;
+        var1 = ((c.dig_p9 as i64) * (p >> 13) * (p >> 13)) >> 25;
+        var2 = ((c.dig_p8 as i64) * p) >> 19;
+        p = ((p + var1 + var2) >> 8) + ((c.dig_p7 as i64) << 4);
+
+        Ok(p as u32)
+    }
+
     pub fn read(&self, i2c: &mut I2c) -> Result<Bmp280Data, Bmp280ReadError>{
         let raw = self.read_raw(i2c)?;
+        let (temperature, fine_temp) = self.convert_raw_temp(raw.temperature)?;
+        let pressure = self.convert_raw_pressure(raw.pressure, fine_temp)?;
 
-        Ok(Bmp280Data { temperature: raw.temperature, pressure: raw.pressure as u32 })
+        Ok(Bmp280Data { temperature, pressure })
     } 
 }
 

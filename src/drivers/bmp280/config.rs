@@ -33,7 +33,7 @@ pub struct DefaultConfig;
 impl Config for DefaultConfig{
     type TempOversampling = OversamplingX1;
     type PressOversampling = OversamplingX2;
-    type PowerMode = PowerModeForced;
+    type PowerMode = PowerModeNormal;
 
     type Standby = Standby0_5ms;
     type IIR = IIROff;
