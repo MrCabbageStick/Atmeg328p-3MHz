@@ -15,6 +15,8 @@ fn main() -> ! {
     let pins = arduino_hal::pins!(dp);
     let mut adc = Adc::new(dp.ADC, Default::default());
 
+    let mut delay = Delay::<MHz8>::new();
+
     // Pins for reading capacitor voltage level
     let mut capacitor_vsum_pin = pins.a1.into_analog_input(&mut adc);
     let mut capacitor_halfv_pin = pins.a0.into_analog_input(&mut adc);
@@ -51,12 +53,16 @@ fn main() -> ! {
     let lx_meter = Veml7700::<ConfigFastLowPower>::new(0x10);
 
     // Inits
+    delay.delay_ms(5);
+
     match lx_meter.init(&mut i2c){
         Ok(_) => ufmt::uwrite!(&mut serial, "VEML7700 initialized\r\n").unwrap_infallible(),
         Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize VEML7700: \n{:?}\r\n", e).unwrap_infallible()
     }
 
-    match bmp280.init(&mut i2c){
+    delay.delay_ms(5);
+
+    match bmp280.init(&mut i2c, &mut delay){
         Ok(_) => ufmt::uwrite!(&mut serial, "Bmp280 initilized\r\n").unwrap_infallible(),
         Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize Bmp280: {:?}\r\n", e).unwrap_infallible(),
     };
@@ -73,7 +79,7 @@ fn main() -> ! {
     loop {
         geiger_counter.tick();
 
-        if millis() - last_millis >= 1000{
+        if millis() - last_millis >= 5000{
             last_millis = millis();
             ufmt::uwrite!(&mut serial, "\r\n--------------- NEW MEASUREMENT ---------------\r\n").unwrap_infallible();
 
@@ -97,11 +103,13 @@ fn main() -> ! {
             match bmp280.read(&mut i2c){
                 Ok(data) => {
                     let temp = split_fixed_point(data.temperature, 100);
+                    let pressure = data.pressure / 256;
+
                     ufmt::uwrite!(
                         &mut serial,
                         "Temp2: {}.{}°C\r\nPressure: {}Pa\r\n", 
                         temp.0, temp.1,
-                        data.pressure
+                        pressure
                     ).unwrap_infallible()
                 },
                 Err(e) => ufmt::uwrite!(&mut serial, "Unable to read BMP280 data: {:?}\r\n", e).unwrap_infallible(),
