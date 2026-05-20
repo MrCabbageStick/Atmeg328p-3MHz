@@ -51,6 +51,7 @@ fn main() -> ! {
     let mut geiger_counter = GeigerCounter::new(dp.TC1);
     let mut bmp280 = Bmp280::<DefaultConfig>::new(0x77);
     let lx_meter = Veml7700::<ConfigFastLowPower>::new(0x10);
+    let aht20 = Aht20::new(0x38);
 
     // Inits
     delay.delay_ms(5);
@@ -58,6 +59,12 @@ fn main() -> ! {
     match lx_meter.init(&mut i2c){
         Ok(_) => ufmt::uwrite!(&mut serial, "VEML7700 initialized\r\n").unwrap_infallible(),
         Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize VEML7700: \n{:?}\r\n", e).unwrap_infallible()
+    }
+
+    delay.delay_ms(5);
+    match aht20.init(&mut i2c, &mut delay){
+        Ok(_) => ufmt::uwrite!(&mut serial, "AHT20 initialized\r\n").unwrap_infallible(),
+        Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize AHT20: \n{:?}\r\n", e).unwrap_infallible()
     }
 
     delay.delay_ms(5);
@@ -90,14 +97,14 @@ fn main() -> ! {
                 Err(_) => ufmt::uwrite!(&mut serial, "Unable to read light sensor data\r\n").unwrap_infallible()
             }
 
-            match Aht20::measure(&mut i2c, 0x38){
-                Some(data) => {
+            match aht20.read(&mut i2c, &mut delay){
+                Ok(data) => {
                     let temp = split_fixed_point(data.temperature, 100);
                     ufmt::uwrite!(&mut serial, "Temperature: {}.{}°C\r\n", temp.0, temp.1).unwrap_infallible();
                     let humidity = split_fixed_point(data.humidity, 100);
                     ufmt::uwrite!(&mut serial, "Relative humidity: {}.{}%\r\n", humidity.0, humidity.1).unwrap_infallible();
                 },
-                None => ufmt::uwrite!(&mut serial, "Unable to read Aht20 data\r\n").unwrap_infallible()
+                Err(e) => ufmt::uwrite!(&mut serial, "Unable to read Aht20 data: \n{:?}\r\n", e).unwrap_infallible()
             }
 
             match bmp280.read(&mut i2c){
