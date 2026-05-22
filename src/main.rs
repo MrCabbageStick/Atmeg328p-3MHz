@@ -4,6 +4,7 @@
 
 use arduino_hal::{Adc, I2c, Peripherals, hal::{delay::Delay, usart::Usart}, pac::tc1, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
 use embedded_hal::delay::DelayNs;
+use ook_433mhz::{driver::OokDriver, mock_pin::MockPin};
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
 
