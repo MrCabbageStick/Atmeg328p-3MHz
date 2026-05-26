@@ -94,33 +94,33 @@ impl Aht20 {
 
         let crc_passed = Self::check_crc(&raw.bytes);
 
-        // Humidity: bits [39:20] of the data payload (bytes 1–3)
+        // Humidity: bits [39:20] of the data payload (bytes 1-3)
         let raw_humidity = 0i64
             | ((raw.bytes[1] as i64) << 12)
             | ((raw.bytes[2] as i64) << 4)
             | ((raw.bytes[3] as i64) >> 4);
 
-        // Temperature: bits [19:0] of the data payload (bytes 3–5)
+        // Temperature: bits [19:0] of the data payload (bytes 3-5)
         let raw_temperature = 0i64
             | ((raw.bytes[3] as i64 & 0x0F) << 16)
             | ((raw.bytes[4] as i64) << 8)
             | (raw.bytes[5] as i64);
 
         Ok(Aht20Data {
-            temperature: Self::convert_temperature(raw_temperature),
-            humidity: Self::convert_humidity(raw_humidity),
+            temperature: Self::convert_temperature::<100>(raw_temperature),
+            humidity: Self::convert_humidity::<100>(raw_humidity),
             crc_passed,
         })
     }
 
     /// T(°C) = (rwa_temp / 2^20) * 200 − 50   →   centidegrees: × 100
-    pub fn convert_temperature(raw: i64) -> i16 {
-        (((raw * 20000) >> 20) - 5000) as i16
+    pub fn convert_temperature<const PRECISION: i64>(raw: i64) -> i16 {
+        (((raw * 200 * PRECISION) >> 20) - 50 * PRECISION) as i16
     }
 
     /// RH(%) = (raw_humidity / 2^20) * 100   →   centipercent: × 100
-    pub fn convert_humidity(raw: i64) -> i16 {
-        ((raw * 10000) >> 20) as i16
+    pub fn convert_humidity<const PRECISION: i64>(raw: i64) -> i16 {
+        ((raw * 100 * PRECISION) >> 20) as i16
     }
 
     /// CRC-8 check (polynomial x^8 + x^5 + x^4 + 1, initial value 0xFF).
