@@ -1,3 +1,5 @@
+use ufmt::derive::uDebug;
+
 use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_MASK, SENSOR_ID_OFFSET, SENSOR_TYPE_MASK, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_MASK, UNIT_SCALE_OFFSET}};
 
 pub struct DynamicLabeledReadout{
@@ -51,6 +53,7 @@ impl LabeledReadout<5> for DynamicLabeledReadout{
     }
 }
 
+#[derive(Debug, uDebug)]
 pub enum SensorType{
     Thermometer,
     Higrometer,

@@ -5,33 +5,39 @@ use ufmt::derive::uDebug;
 use crate::{data_handling::{labeled_readout::LabeledReadout, static_labeled_readout::{Barometer, Higrometer, Luxmeter, SensorId0, SensorId1, Thermometer, TypedLabelReadout, UnitScale1_100, UnitScale1_1000}}, drivers::{aht20::{Aht20, Aht20Error}, bmp280::{self, driver::{Bmp280, Bmp280ReadError}}, veml7700::{self, driver::Veml7700}}, resistor_divider};
 
 const BMP280_ADDR: u8 = 0x77;
-const VEML7700_ADDR: u8 = 0x45;
-const AHT20_ADDR: u8 = 0x76;
+const VEML7700_ADDR: u8 = 0x10;
+const AHT20_ADDR: u8 = 0x38;
 
 const SENSOR_INIT_DELAY_MS: u32 = 5;
 
-pub struct ClimateSensor<VemlConfig, Bmp280Config, D: DelayNs, Cap1Pin: InputPin, Cap2Pin: InputPin>{
+pub struct ClimateSensor<
+VemlConfig, 
+Bmp280Config, 
+D: DelayNs,
+SumCapPin: AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
+SecondCapPin: AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
+>{
     // SENSORS
     aht20: Aht20,
     bmp280: Bmp280<Bmp280Config>,
     veml7700: Veml7700<VemlConfig>,
     // PINS
-    sum_capacitor: Cap1Pin,
-    capacitor_2_pin: Cap2Pin,
+    sum_capacitor: SumCapPin,
+    capacitor_2_pin: SecondCapPin,
     // COMMUNICATION
     i2c: i2c::I2c,
     // TIMING
     delay: D,
 }
 
-impl<VemlConfig, Bmp280Config, D, Cap1Pin, Cap2Pin> ClimateSensor<VemlConfig, Bmp280Config, D, Cap1Pin, Cap2Pin>
+impl<VemlConfig, Bmp280Config, D, SumCapPin, SecondCapPin> ClimateSensor<VemlConfig, Bmp280Config, D, SumCapPin, SecondCapPin>
 where VemlConfig: veml7700::config::Config, 
     Bmp280Config: bmp280::config::Config, 
     D: DelayNs, 
-    Cap1Pin: InputPin + AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>, 
-    Cap2Pin: InputPin + AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
+    SumCapPin: AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
+    SecondCapPin: AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
 {
-    pub fn new(i2c: i2c::I2c, delay: D, sum_capacitor: Cap1Pin, capacitor_2: Cap2Pin) -> Self{
+    pub fn new(i2c: i2c::I2c, delay: D, sum_capacitor: SumCapPin, second_capacitor: SecondCapPin) -> Self{
         Self{
             bmp280: Bmp280::new(BMP280_ADDR),
             veml7700: Veml7700::new(VEML7700_ADDR),
@@ -39,7 +45,7 @@ where VemlConfig: veml7700::config::Config,
             i2c,
             delay,
             sum_capacitor,
-            capacitor_2_pin: capacitor_2,
+            capacitor_2_pin: second_capacitor,
         }
     }
 

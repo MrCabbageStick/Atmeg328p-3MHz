@@ -2,12 +2,12 @@
 #![no_main]
 #![feature(asm_experimental_arch)]
 
-use arduino_hal::{Adc, I2c, hal::{delay::Delay, port::{PC0, PC1}, usart::Usart}, port::{Pin, mode::Analog}, usart::Baudrate};
-use embedded_hal::digital::InputPin;
+use arduino_hal::{Adc, I2c, hal::{delay::Delay, port::{PC0, PC1}, usart::Usart}, port::{Pin, mode::Analog}, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
+use embedded_hal::delay::DelayNs;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
 
-use battery_free_climat_sensor::{climate_sensor::ClimateSensor, drivers::geiger_counter::GeigerCounter, power_controlled_bus::ActiveLowPin, util::timer::millis_init};
+use battery_free_climat_sensor::{climate_sensor::ClimateSensor, data_handling::{dynamic_labeled_readout::DynamicLabeledReadout, labeled_readout::LabeledReadout}, drivers::geiger_counter::GeigerCounter, power_controlled_bus::ActiveLowPin, util::timer::millis_init};
 use battery_free_climat_sensor::drivers::{bmp280::config::DefaultConfig as Bmp280DefaultConf, veml7700::config::ConfigFastLowPower as Veml7700DefaultConf};
 
 #[arduino_hal::entry]
@@ -55,28 +55,54 @@ fn main() -> ! {
 
     let mut climate_sensor = ClimateSensor::<
         Veml7700DefaultConf,
-        Bmp280DefaultConf,
-        _, Pin<Analog, PC1>, Pin<Analog, PC0>
+        Bmp280DefaultConf, _, _, _
     >::new(
-        i2c, 
-        delay, 
-        capacitor_vsum_pin.into(),
-        capacitor_halfv_pin.into(),
+        i2c,
+        Delay::<MHz8>::new(),
+        capacitor_vsum_pin,
+        capacitor_halfv_pin,
     );
+
+    ufmt::uwrite!(&mut serial, "--~~==### POWER ON ##==~~--\r\n").unwrap_infallible();
 
     let initialized;
     match climate_sensor.init(){
         Ok(_) => {
             initialized = true;
-            ufmt::uwrite!(&mut serial, "Climate sensor initilized\r\n");
+            ufmt::uwrite!(&mut serial, "Climate sensor initilized\r\n").unwrap_infallible();
         }
         Err(err) => {
             initialized = false;
-            ufmt::uwrite!(&mut serial, "Climate sensor initilized.\r\nErr: {:?}", err);
+            ufmt::uwrite!(&mut serial, "Climate sensor initilized. Err: {:?}\r\n", err).unwrap_infallible();
         }
     }
 
     loop {
-        
+        if !initialized{ continue; }
+
+        ufmt::uwrite!(&mut serial, " -<< NEW READOUT >>-\r\n").unwrap_infallible();
+
+        match climate_sensor.read_bytes(){
+            Ok(data) => {
+                for readout_bytes in data.chunks(5){
+                    match DynamicLabeledReadout::from_bytes(readout_bytes){
+                        Some(readout) => ufmt::uwrite!(
+                            &mut serial, 
+                            "SensorId: {}, UnitScale: {}, Type: {:?}, Data: {}\r\n",
+                            readout.sensor_id(),
+                            readout.unit_scale(),
+                            readout.sensor_type(),
+                            readout.get_data() as i32,
+                        ).unwrap_infallible(),
+                        None => ufmt::uwrite!(&mut serial, "Unable to get labeled readout from bytes\r\n").unwrap_infallible()
+                    }
+                }
+            },
+            Err(err) => {
+                ufmt::uwrite!(&mut serial, "Error while reading the data: {:?}\r\n", err).unwrap_infallible()
+            }
+        }
+
+        delay.delay_ms(1000);
     }
 }
