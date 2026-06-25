@@ -2,13 +2,13 @@
 #![no_main]
 #![feature(asm_experimental_arch)]
 
-use arduino_hal::{Adc, I2c, Peripherals, hal::{delay::Delay, usart::Usart}, pac::tc1, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
-use embedded_hal::delay::DelayNs;
-use ook_433mhz::{driver::OokDriver, mock_pin::MockPin};
+use arduino_hal::{Adc, I2c, hal::{delay::Delay, port::{PC0, PC1}, usart::Usart}, port::{Pin, mode::Analog}, usart::Baudrate};
+use embedded_hal::digital::InputPin;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
 
-use battery_free_climat_sensor::{drivers::{aht20::Aht20, bmp280::{config::DefaultConfig, driver::Bmp280}, geiger_counter::GeigerCounter, veml7700::{config::ConfigFastLowPower, driver::Veml7700}}, power_controlled_bus::ActiveLowPin, resistor_divider::read_voltage_divider_mv, util::{split_fixed_point, timer::{millis, millis_init}}};
+use battery_free_climat_sensor::{climate_sensor::ClimateSensor, drivers::geiger_counter::GeigerCounter, power_controlled_bus::ActiveLowPin, util::timer::millis_init};
+use battery_free_climat_sensor::drivers::{bmp280::config::DefaultConfig as Bmp280DefaultConf, veml7700::config::ConfigFastLowPower as Veml7700DefaultConf};
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -50,84 +50,33 @@ fn main() -> ! {
 
     // Sensors
     let mut geiger_counter = GeigerCounter::new(dp.TC1);
-    let mut bmp280 = Bmp280::<DefaultConfig>::new(0x77);
-    let lx_meter = Veml7700::<ConfigFastLowPower>::new(0x10);
-    let aht20 = Aht20::new(0x38);
-
-    // Inits
-    delay.delay_ms(5);
-
-    match lx_meter.init(&mut i2c){
-        Ok(_) => ufmt::uwrite!(&mut serial, "VEML7700 initialized\r\n").unwrap_infallible(),
-        Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize VEML7700: \n{:?}\r\n", e).unwrap_infallible()
-    }
-
-    delay.delay_ms(5);
-    match aht20.init(&mut i2c, &mut delay){
-        Ok(_) => ufmt::uwrite!(&mut serial, "AHT20 initialized\r\n").unwrap_infallible(),
-        Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize AHT20: \n{:?}\r\n", e).unwrap_infallible()
-    }
-
-    delay.delay_ms(5);
-
-    match bmp280.init(&mut i2c, &mut delay){
-        Ok(_) => ufmt::uwrite!(&mut serial, "Bmp280 initilized\r\n").unwrap_infallible(),
-        Err(e) => ufmt::uwrite!(&mut serial, "Unable to initialize Bmp280: {:?}\r\n", e).unwrap_infallible(),
-    };
-
-    geiger_counter.init();
-
     millis_init(dp.TC0);
 
 
-    ufmt::uwrite!(&mut serial, "--------------------------\r\n").unwrap_infallible();
+    let mut climate_sensor = ClimateSensor::<
+        Veml7700DefaultConf,
+        Bmp280DefaultConf,
+        _, Pin<Analog, PC1>, Pin<Analog, PC0>
+    >::new(
+        i2c, 
+        delay, 
+        capacitor_vsum_pin.into(),
+        capacitor_halfv_pin.into(),
+    );
 
-    let mut last_millis = millis();
+    let initialized;
+    match climate_sensor.init(){
+        Ok(_) => {
+            initialized = true;
+            ufmt::uwrite!(&mut serial, "Climate sensor initilized\r\n");
+        }
+        Err(err) => {
+            initialized = false;
+            ufmt::uwrite!(&mut serial, "Climate sensor initilized.\r\nErr: {:?}", err);
+        }
+    }
 
     loop {
-        geiger_counter.tick();
-
-        if millis() - last_millis >= 5000{
-            last_millis = millis();
-            ufmt::uwrite!(&mut serial, "\r\n--------------- NEW MEASUREMENT ---------------\r\n").unwrap_infallible();
-
-            ufmt::uwrite!(&mut serial, "Cpm: {}\r\n", geiger_counter.cpm()).unwrap_infallible();
-
-            match lx_meter.read(&mut i2c){
-                Ok(lx) => ufmt::uwrite!(&mut serial, "Light sensor: {} lx\r\n", lx).unwrap_infallible(),
-                Err(_) => ufmt::uwrite!(&mut serial, "Unable to read light sensor data\r\n").unwrap_infallible()
-            }
-
-            match aht20.read(&mut i2c, &mut delay){
-                Ok(data) => {
-                    let temp = split_fixed_point(data.temperature, 100);
-                    ufmt::uwrite!(&mut serial, "Temperature: {}.{}°C\r\n", temp.0, temp.1).unwrap_infallible();
-                    let humidity = split_fixed_point(data.humidity, 100);
-                    ufmt::uwrite!(&mut serial, "Relative humidity: {}.{}%\r\n", humidity.0, humidity.1).unwrap_infallible();
-                },
-                Err(e) => ufmt::uwrite!(&mut serial, "Unable to read Aht20 data: \n{:?}\r\n", e).unwrap_infallible()
-            }
-
-            match bmp280.read(&mut i2c){
-                Ok(data) => {
-                    let temp = split_fixed_point(data.temperature, 100);
-                    let pressure = data.pressure / 256;
-
-                    ufmt::uwrite!(
-                        &mut serial,
-                        "Temp2: {}.{}°C\r\nPressure: {}Pa\r\n", 
-                        temp.0, temp.1,
-                        pressure
-                    ).unwrap_infallible()
-                },
-                Err(e) => ufmt::uwrite!(&mut serial, "Unable to read BMP280 data: {:?}\r\n", e).unwrap_infallible(),
-            }
-
-            let v_cap = read_voltage_divider_mv::<100_000,1_000_000,3300,_>(&mut capacitor_vsum_pin, &mut adc);
-            let v_half_cap = read_voltage_divider_mv::<1_000_000,100_000,3300,_>(&mut capacitor_halfv_pin, &mut adc);
-
-            ufmt::uwrite!(&mut serial, "Capacitor1: {}mV\r\n", v_cap - v_half_cap).unwrap_infallible();
-            ufmt::uwrite!(&mut serial, "Capacitor2: {}mV\r\n", v_half_cap).unwrap_infallible();
-        }
+        
     }
 }

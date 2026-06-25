@@ -43,7 +43,7 @@ impl Aht20 {
     /// Must be called once after power-on. Waits up to 40 ms.
     /// Checks the calibration-enable bit and sends the
     /// initialisation command if needed
-    pub fn init<D: DelayNs>(&self, i2c: &mut I2c, delay: &mut D) -> Result<(), Aht20Error> {
+    pub fn init<D: DelayNs + ?Sized>(&self, i2c: &mut I2c, delay: &mut D) -> Result<(), Aht20Error> {
         // Datasheet 5.4: wait at least 40 ms after power-on
         delay.delay_ms(40);
 
@@ -71,7 +71,7 @@ impl Aht20 {
     ///
     /// Checks the busy bit after the required 80 ms wait (datasheet 5.4,
     /// steps 2–3)
-    pub fn read_raw<D: DelayNs>(&self, i2c: &mut I2c, delay: &mut D) -> Result<Aht20RawData, Aht20Error> {
+    pub fn read_raw<D: DelayNs + ?Sized>(&self, i2c: &mut I2c, delay: &mut D) -> Result<Aht20RawData, Aht20Error> {
         i2c.write(self.address, &COMMAND_START_MEASUREMENT)?;
 
         // Datasheet 5.4 step 3: wait 80 ms, then check busy bit
@@ -89,7 +89,7 @@ impl Aht20 {
     }
 
     /// Trigger a measurement and return calibrated temperature and humidity
-    pub fn read<D: DelayNs>(&self, i2c: &mut I2c, delay: &mut D) -> Result<Aht20Data, Aht20Error> {
+    pub fn read<D: DelayNs + ?Sized>(&self, i2c: &mut I2c, delay: &mut D) -> Result<Aht20Data, Aht20Error> {
         let raw = self.read_raw(i2c, delay)?;
 
         let crc_passed = Self::check_crc(&raw.bytes);
