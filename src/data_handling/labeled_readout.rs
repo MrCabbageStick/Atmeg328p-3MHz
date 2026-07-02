@@ -14,10 +14,10 @@ pub mod consts{
 
 
     pub const SENSOR_ID_OFFSET: u8 = 6;
-    pub const SENSOR_ID_MASK: u8 = 0b11;
+    pub const SENSOR_ID_MASK: u8 = 0b11 << SENSOR_ID_OFFSET;
 
     pub const UNIT_SCALE_OFFSET: u8 = 4;
-    pub const UNIT_SCALE_MASK: u8 = 0b11;
+    pub const UNIT_SCALE_MASK: u8 = 0b11 << UNIT_SCALE_OFFSET;
 
     pub const SENSOR_TYPE_OFFSET: u8 = 0;
     pub const SENSOR_TYPE_MASK: u8 = 0b1111;

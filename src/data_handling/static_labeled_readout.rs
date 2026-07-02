@@ -9,9 +9,9 @@ pub struct TypedLabelReadout<ID, SCALE, TYPE>{
 
 impl<ID: SensorId, SCALE: UnitScale, TYPE: SensorType> TypedLabelReadout<ID, SCALE, TYPE> {
     const LABEL: u8 = 
-        (ID::BITS & SENSOR_ID_MASK) << SENSOR_ID_OFFSET
-        | (SCALE::BITS & UNIT_SCALE_MASK) << UNIT_SCALE_OFFSET
-        | (TYPE::BITS & SENSOR_TYPE_MASK) << SENSOR_TYPE_OFFSET;
+        (ID::BITS << SENSOR_ID_OFFSET) & SENSOR_ID_MASK
+        | (SCALE::BITS << UNIT_SCALE_OFFSET) & UNIT_SCALE_MASK
+        | (TYPE::BITS << SENSOR_TYPE_OFFSET) & SENSOR_TYPE_MASK;
 
     pub fn new(data: u32) -> Self { Self {data, _label: PhantomData} }
 

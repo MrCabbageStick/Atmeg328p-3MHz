@@ -28,6 +28,8 @@ SecondCapPin: AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
     i2c: i2c::I2c,
     // TIMING
     delay: D,
+    // MISC
+    sensor_id: u8,
 }
 
 impl<VemlConfig, Bmp280Config, D, SumCapPin, SecondCapPin> ClimateSensor<VemlConfig, Bmp280Config, D, SumCapPin, SecondCapPin>
@@ -37,7 +39,7 @@ where VemlConfig: veml7700::config::Config,
     SumCapPin: AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
     SecondCapPin: AdcChannel<arduino_hal::hal::Atmega, arduino_hal::pac::ADC>,
 {
-    pub fn new(i2c: i2c::I2c, delay: D, sum_capacitor: SumCapPin, second_capacitor: SecondCapPin) -> Self{
+    pub fn new(sensor_id: u8, i2c: i2c::I2c, delay: D, sum_capacitor: SumCapPin, second_capacitor: SecondCapPin) -> Self{
         Self{
             bmp280: Bmp280::new(BMP280_ADDR),
             veml7700: Veml7700::new(VEML7700_ADDR),
@@ -46,6 +48,7 @@ where VemlConfig: veml7700::config::Config,
             delay,
             sum_capacitor,
             capacitor_2_pin: second_capacitor,
+            sensor_id,
         }
     }
 
@@ -105,10 +108,11 @@ where VemlConfig: veml7700::config::Config,
         Ok(N_BYTES)
     }
 
-    pub fn read_bytes(&mut self) -> Result<[u8; 25], ClimateSensorReadError>{
-        let mut bytes = [0; 25];
+    pub fn read_bytes(&mut self) -> Result<[u8; 26], ClimateSensorReadError>{
+        let mut bytes = [0; 26];
+        bytes[0] = self.sensor_id;
 
-        let _bytes_written = self.read_modules(&mut bytes)?;
+        let _bytes_written = self.read_modules(&mut bytes[1..])?;
 
         Ok(bytes)
     }

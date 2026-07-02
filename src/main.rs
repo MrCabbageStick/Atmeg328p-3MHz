@@ -57,6 +57,7 @@ fn main() -> ! {
         Veml7700DefaultConf,
         Bmp280DefaultConf, _, _, _
     >::new(
+        1,
         i2c,
         Delay::<MHz8>::new(),
         capacitor_vsum_pin,
@@ -84,7 +85,9 @@ fn main() -> ! {
 
         match climate_sensor.read_bytes(){
             Ok(data) => {
-                for readout_bytes in data.chunks(5){
+                ufmt::uwrite!(&mut serial, "Climate sensor no. {}\r\n", data[0]).unwrap_infallible();
+
+                for readout_bytes in data[1..].chunks(5){
                     match DynamicLabeledReadout::from_bytes(readout_bytes){
                         Some(readout) => ufmt::uwrite!(
                             &mut serial, 
@@ -102,6 +105,12 @@ fn main() -> ! {
                 ufmt::uwrite!(&mut serial, "Error while reading the data: {:?}\r\n", err).unwrap_infallible()
             }
         }
+
+        let charge_info = climate_sensor.get_charge_info(&mut adc);
+        ufmt::uwrite!(
+            &mut serial, "Sum voltage: {} mV\r\nCap1 voltage: {} mV\r\nCap2 voltage: {} mV\r\n",
+            charge_info.sum_mv, charge_info.first_mv, charge_info.second_mv
+        ).unwrap_infallible();
 
         delay.delay_ms(1000);
     }
