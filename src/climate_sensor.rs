@@ -2,7 +2,7 @@ use arduino_hal::{Adc, adc::AdcChannel, i2c};
 use embedded_hal::{delay::DelayNs, digital::InputPin};
 use ufmt::derive::uDebug;
 
-use crate::{data_handling::{labeled_readout::LabeledReadout, static_labeled_readout::{Barometer, Higrometer, Luxmeter, SensorId0, SensorId1, Thermometer, TypedLabelReadout, UnitScale1_100, UnitScale1_1000}}, drivers::{aht20::{Aht20, Aht20Error}, bmp280::{self, driver::{Bmp280, Bmp280ReadError}}, veml7700::{self, driver::Veml7700}}, resistor_divider};
+use crate::{data_handling::{labeled_readout::LabeledReadout, static_labeled_readout::{Barometer, Higrometer, Luxmeter, SensorId0, SensorId1, SensorId2, Thermometer, TypedLabelReadout, UnitScale1_100, UnitScale1_1000, Voltmeter}}, drivers::{aht20::{Aht20, Aht20Error}, bmp280::{self, driver::{Bmp280, Bmp280ReadError}}, veml7700::{self, driver::Veml7700}}, resistor_divider};
 
 const BMP280_ADDR: u8 = 0x77;
 const VEML7700_ADDR: u8 = 0x10;
@@ -108,13 +108,35 @@ where VemlConfig: veml7700::config::Config,
         Ok(N_BYTES)
     }
 
-    pub fn read_bytes(&mut self) -> Result<[u8; 26], ClimateSensorReadError>{
-        let mut bytes = [0; 26];
+    pub fn read_bytes(&mut self, adc: &mut Adc) -> Result<[u8; 1 + 25 + 15], ClimateSensorReadError>{
+        let mut bytes = [0; 1 + 25 + 15];
         bytes[0] = self.sensor_id;
 
-        let _bytes_written = self.read_modules(&mut bytes[1..])?;
+        let module_bytes_written = self.read_modules(&mut bytes[1..26])?;
+        
+        self.read_charge_info(&mut bytes[1 + module_bytes_written..], adc);
 
         Ok(bytes)
+    }
+
+    pub fn read_charge_info(&mut self, data: &mut [u8], adc: &mut Adc) -> usize {
+        const N_BYTES: usize = 15;
+
+        if data.len() < 15{
+            return 0;
+        }
+
+        let charge_info = self.get_charge_info(adc);
+
+        let sum_mv = TypedLabelReadout::<SensorId0, UnitScale1_1000, Voltmeter>::new(charge_info.sum_mv as u32);
+        let first_mv = TypedLabelReadout::<SensorId1, UnitScale1_1000, Voltmeter>::new(charge_info.first_mv as u32);
+        let second_mv = TypedLabelReadout::<SensorId2, UnitScale1_1000, Voltmeter>::new(charge_info.second_mv as u32);
+    
+        data[0..5].copy_from_slice(&sum_mv.get_bytes());
+        data[5..10].copy_from_slice(&first_mv.get_bytes());
+        data[10..15].copy_from_slice(&second_mv.get_bytes());
+
+        return N_BYTES;
     }
 
     pub fn get_charge_info(&mut self, adc: &mut Adc) -> ChargeInfo{

@@ -11,6 +11,7 @@ pub mod consts{
     pub const HIGROMETER_SENSOR_TYPE: u8 = 0b0001;
     pub const BAROMETER_SENSOR_TYPE: u8 = 0b0010;
     pub const LUXMETER_SENSOR_TYPE: u8 = 0b0011;
+    pub const VOLTMETER_SENSOR_TYPE: u8 = 0b0100;
 
 
     pub const SENSOR_ID_OFFSET: u8 = 6;

@@ -93,7 +93,7 @@ fn main() -> ! {
         // ufmt::uwrite!(&mut serial, " -<< NEW READOUT >>-\r\n").unwrap_infallible();
 
         if transmitter.is_idle(){
-            match climate_sensor.read_bytes(){
+            match climate_sensor.read_bytes(&mut adc){
                 Ok(data) => {
                     // ufmt::uwrite!(&mut serial, "Climate sensor no. {}\r\n", data[0]).unwrap_infallible();
     
