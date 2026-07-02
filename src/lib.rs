@@ -17,3 +17,4 @@ pub mod data_handling;
 pub mod device;
 pub mod climate_sensor;
 pub mod climate_sensor_data;
+pub mod radio;

@@ -4,10 +4,11 @@
 
 use arduino_hal::{Adc, I2c, hal::{delay::Delay, port::{PC0, PC1}, usart::Usart}, port::{Pin, mode::Analog}, prelude::_unwrap_infallible_UnwrapInfallible, usart::Baudrate};
 use embedded_hal::delay::DelayNs;
+use ook_433mhz::driver::transmitter::Transmitter;
 use panic_halt as _;
 use arduino_hal::hal::clock::MHz8;
 
-use battery_free_climat_sensor::{climate_sensor::ClimateSensor, data_handling::{dynamic_labeled_readout::DynamicLabeledReadout, labeled_readout::LabeledReadout}, drivers::geiger_counter::GeigerCounter, power_controlled_bus::ActiveLowPin, util::timer::millis_init};
+use battery_free_climat_sensor::{climate_sensor::ClimateSensor, data_handling::{dynamic_labeled_readout::DynamicLabeledReadout, labeled_readout::LabeledReadout}, drivers::geiger_counter::GeigerCounter, power_controlled_bus::ActiveLowPin, radio::{setup_timer_2, should_tick}, util::timer::millis_init};
 use battery_free_climat_sensor::drivers::{bmp280::config::DefaultConfig as Bmp280DefaultConf, veml7700::config::ConfigFastLowPower as Veml7700DefaultConf};
 
 #[arduino_hal::entry]
@@ -50,8 +51,11 @@ fn main() -> ! {
 
     // Sensors
     let mut geiger_counter = GeigerCounter::new(dp.TC1);
-    millis_init(dp.TC0);
 
+    setup_timer_2(dp.TC2);
+    let mut transmitter = Transmitter::<5, _>::new(pins.d7.into_output());
+
+    millis_init(dp.TC0);
 
     let mut climate_sensor = ClimateSensor::<
         Veml7700DefaultConf,
@@ -79,39 +83,48 @@ fn main() -> ! {
     }
 
     loop {
+        if should_tick(){
+            
+            transmitter.transmit();
+            // ufmt::uwrite!(&mut serial, "Tick\r\n").unwrap_infallible();
+        }
         if !initialized{ continue; }
 
-        ufmt::uwrite!(&mut serial, " -<< NEW READOUT >>-\r\n").unwrap_infallible();
+        // ufmt::uwrite!(&mut serial, " -<< NEW READOUT >>-\r\n").unwrap_infallible();
 
-        match climate_sensor.read_bytes(){
-            Ok(data) => {
-                ufmt::uwrite!(&mut serial, "Climate sensor no. {}\r\n", data[0]).unwrap_infallible();
-
-                for readout_bytes in data[1..].chunks(5){
-                    match DynamicLabeledReadout::from_bytes(readout_bytes){
-                        Some(readout) => ufmt::uwrite!(
-                            &mut serial, 
-                            "SensorId: {}, UnitScale: {}, Type: {:?}, Data: {}\r\n",
-                            readout.sensor_id(),
-                            readout.unit_scale(),
-                            readout.sensor_type(),
-                            readout.get_data() as i32,
-                        ).unwrap_infallible(),
-                        None => ufmt::uwrite!(&mut serial, "Unable to get labeled readout from bytes\r\n").unwrap_infallible()
-                    }
+        if transmitter.is_idle(){
+            match climate_sensor.read_bytes(){
+                Ok(data) => {
+                    // ufmt::uwrite!(&mut serial, "Climate sensor no. {}\r\n", data[0]).unwrap_infallible();
+    
+                    // for readout_bytes in data[1..].chunks(5){
+                    //     match DynamicLabeledReadout::from_bytes(readout_bytes){
+                    //         Some(readout) => ufmt::uwrite!(
+                    //             &mut serial, 
+                    //             "SensorId: {}, UnitScale: {}, Type: {:?}, Data: {}\r\n",
+                    //             readout.sensor_id(),
+                    //             readout.unit_scale(),
+                    //             readout.sensor_type(),
+                    //             readout.get_data() as i32,
+                    //         ).unwrap_infallible(),
+                    //         None => ufmt::uwrite!(&mut serial, "Unable to get labeled readout from bytes\r\n").unwrap_infallible()
+                    //     }
+                    // }
+                    ufmt::uwrite!(&mut serial, "New readout\r\n").unwrap_infallible();
+                    transmitter.send(&data);
+                },
+                Err(err) => {
+                    ufmt::uwrite!(&mut serial, "Error while reading the data: {:?}\r\n", err).unwrap_infallible()
                 }
-            },
-            Err(err) => {
-                ufmt::uwrite!(&mut serial, "Error while reading the data: {:?}\r\n", err).unwrap_infallible()
             }
         }
 
-        let charge_info = climate_sensor.get_charge_info(&mut adc);
-        ufmt::uwrite!(
-            &mut serial, "Sum voltage: {} mV\r\nCap1 voltage: {} mV\r\nCap2 voltage: {} mV\r\n",
-            charge_info.sum_mv, charge_info.first_mv, charge_info.second_mv
-        ).unwrap_infallible();
+        // let charge_info = climate_sensor.get_charge_info(&mut adc);
+        // ufmt::uwrite!(
+        //     &mut serial, "Sum voltage: {} mV\r\nCap1 voltage: {} mV\r\nCap2 voltage: {} mV\r\n",
+        //     charge_info.sum_mv, charge_info.first_mv, charge_info.second_mv
+        // ).unwrap_infallible();
 
-        delay.delay_ms(1000);
+        // delay.delay_ms(1000);
     }
 }
