@@ -6,7 +6,7 @@ use arduino_hal::pac::TC0;
 static MILLIS_COUNTER: Mutex<Cell<u32>> = Mutex::new(Cell::new(0));
 
 /// Call once at startup to configure Timer0 for millis tracking
-pub fn millis_init(tc0: TC0) {
+pub fn millis_init(tc0: &TC0) {
     // Normal port operation, WGM = CTC (mode 2 — clear on compare match)
     tc0.tccr0a().write(|w| w.wgm0().ctc());
 

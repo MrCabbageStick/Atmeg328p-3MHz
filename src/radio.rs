@@ -18,7 +18,7 @@ pub fn should_tick() -> bool {
     flag
 }
 
-pub fn setup_timer_2(tc2: TC2){
+pub fn setup_timer_2(tc2: &TC2){
     // Normal port operation, CTC
     tc2.tccr2a().write(|w| w.wgm2().ctc());
 
