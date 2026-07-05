@@ -1,10 +1,10 @@
 use core::cell::Cell;
 
-use arduino_hal::{Peripherals, pac::{CPU, WDT}};
+use arduino_hal::pac::{CPU, WDT};
 use avr_device::interrupt;
 
 static WDT_COUNT: interrupt::Mutex<Cell<u8>> = interrupt::Mutex::new(Cell::new(0));
-const WAKE_CYCLES: u8 = 1;
+const WAKE_CYCLES: u8 = 5;
 
 
 pub fn ready() -> bool {
@@ -59,10 +59,6 @@ pub fn enter_sleep(cpu: &CPU) {
         cpu.mcucr().modify(|_, w| w.bods().set_bit().bodse().clear_bit());
     });
 
-    // Standard atomic sei-then-sleep idiom — NOT wrapped in interrupt::free.
-    // sei() guarantees the very next instruction (sleep) executes before
-    // any pending interrupt is serviced, so there's no race between
-    // "check nothing pending" and "go to sleep".
     unsafe {
         avr_device::interrupt::enable();
     }
