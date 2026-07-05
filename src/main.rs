@@ -20,6 +20,8 @@ fn main() -> ! {
     let mut power_manager = PowerManager::new(pins.d6.into_output(), pins.d10.into_output(), pins.d8.into_output(), true);
     power_manager.deactivate_all();
 
+    let mut status_led = pins.d9.into_output_high();
+
     // Communication
     let mut serial = Usart::new(
         dp.USART0, 
@@ -36,6 +38,8 @@ fn main() -> ! {
     );
 
     setup_timer_2(dp.TC2);
+    unsafe { avr_device::interrupt::enable(); }
+
     let mut transmitter = Transmitter::<5, _>::new(pins.d7.into_output());
 
     let mut climate_sensor = ClimateSensor::<
@@ -49,11 +53,16 @@ fn main() -> ! {
         pins.a0.into_analog_input(&mut adc),
     );
 
+    power_manager.activate_all();
+
     ufmt::uwrite!(&mut serial, "[INFO]: Powered on\r\n").unwrap_infallible();
 
     let mut initialized = false;
 
     loop {
+        status_led.set_low();
+        power_manager.deactivate_power_hungry();
+
         // If climate sensor not initialized, initialize it
         if !initialized{
             match climate_sensor.init(){
@@ -69,20 +78,23 @@ fn main() -> ! {
             }
         }
 
-        if should_transmitter_tick(){
-            transmitter.transmit();
-        }
+        match climate_sensor.read_bytes(&mut adc){
+            Ok(data) => {
+                ufmt::uwrite!(&mut serial, "[INFO]: New readout\r\n").unwrap_infallible();
+                transmitter.send(&data);
 
-        if transmitter.is_idle(){
-            match climate_sensor.read_bytes(&mut adc){
-                Ok(data) => {
-                    ufmt::uwrite!(&mut serial, "[INFO]: New readout\r\n").unwrap_infallible();
-                    transmitter.send(&data);
-                },
-                Err(err) => {
-                    ufmt::uwrite!(&mut serial, "[ERROR]: Error while reading the data: {:?}\r\n", err).unwrap_infallible()
+                while !transmitter.is_idle(){
+                    if should_transmitter_tick(){
+                        transmitter.transmit();
+                    }
                 }
+            },
+            Err(err) => {
+                ufmt::uwrite!(&mut serial, "[ERROR]: Error while reading the data: {:?}\r\n", err).unwrap_infallible()
             }
         }
+
+        power_manager.deactivate_power_hungry();
+        status_led.set_high();
     }
 }
