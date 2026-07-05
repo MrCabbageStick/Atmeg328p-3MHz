@@ -11,7 +11,7 @@ use battery_free_climat_sensor::{climate_sensor::ClimateSensor, power_manager::P
 use battery_free_climat_sensor::drivers::{bmp280::config::DefaultConfig as Bmp280DefaultConf, veml7700::config::ConfigFastLowPower as Veml7700DefaultConf};
 
 
-const SEND_DATA_N_TIMES: u8 = 2;
+const SEND_DATA_N_TIMES: u8 = 3;
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -66,10 +66,8 @@ fn main() -> ! {
     let mut initialized = false;
 
     loop {
-        sleep::enter_sleep(&dp.CPU);
-
-        if !sleep::ready(){
-            continue;
+        while !sleep::ready(){
+            sleep::enter_sleep(&dp.CPU);
         }
 
         status_led.set_low();
