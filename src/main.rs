@@ -37,7 +37,7 @@ fn main() -> ! {
         50_000
     );
 
-    setup_timer_2(dp.TC2);
+    setup_timer_2(&dp.TC2);
     unsafe { avr_device::interrupt::enable(); }
 
     let mut transmitter = Transmitter::<5, _>::new(pins.d7.into_output());

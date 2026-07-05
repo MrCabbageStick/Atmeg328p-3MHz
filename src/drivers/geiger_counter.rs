@@ -4,22 +4,22 @@ use crate::util::timer::millis;
 
 const MILLIS_IN_SECOND: u32 = 1_000;
 
-pub struct GeigerCounter{
+pub struct GeigerCounter<'a>{
     last_millis: u32,
     counts: [u16; 60],
     index: usize,
     sum: u32,
     filled: u8,
-    timer: TC1,
+    timer: &'a TC1,
 }
 
-impl GeigerCounter{
-    pub fn new(tc1: TC1) -> Self{
+impl<'a> GeigerCounter<'a>{
+    pub fn new(tc1: &'a TC1) -> Self{
         Self{ last_millis: 0, index: 0, sum: 0, filled: 0, counts: [0; 60], timer: tc1}
     }
 
     pub fn init(&self){
-        timer1_counter_setup(&self.timer);
+        timer1_counter_setup(self.timer);
     }
 
     pub fn tick(&mut self){
@@ -31,7 +31,7 @@ impl GeigerCounter{
 
         self.sum -= self.counts[self.index] as u32;
 
-        let count = timer1_read_and_reset(&self.timer);
+        let count = timer1_read_and_reset(self.timer);
 
         self.counts[self.index] = count;
         self.sum += count as u32;
