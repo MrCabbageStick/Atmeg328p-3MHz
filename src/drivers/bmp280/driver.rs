@@ -1,15 +1,15 @@
-use core::{error::Error, fmt::{self, Debug, Display}, marker::PhantomData};
+use core::{error::Error, fmt::{Debug, Display}, marker::PhantomData};
 
-use arduino_hal::{Delay, I2c, i2c, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
+use arduino_hal::{I2c, i2c, prelude::{_embedded_hal_blocking_i2c_Write, _embedded_hal_blocking_i2c_WriteRead}};
 use embedded_hal::delay::DelayNs;
-use ufmt::{derive::uDebug, uDebug};
+use ufmt::derive::uDebug;
 
 use crate::drivers::bmp280::config::Config;
 
 const CTRL_MEAS_REGISTER_ADDRESS: u8 = 0xf4;
 const CONFIG_REGISTER_ADDRESS: u8 = 0xf5;
 
-const TEMPERATURE_MS_BYTE_ADDRESS: u8 = 0xfa;
+// const TEMPERATURE_MS_BYTE_ADDRESS: u8 = 0xfa;
 const PRESSURE_MS_BYTE_ADDRESS: u8 = 0xf7;
 
 const COMPENSATION_START_ADDRESS: u8 = 0x88;

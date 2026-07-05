@@ -1,5 +1,3 @@
-use core::marker::PhantomData;
-
 use arduino_hal::pac::TC1;
 
 use crate::util::timer::millis;

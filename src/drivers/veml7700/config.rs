@@ -49,7 +49,8 @@ BIT(s)   FIELD        DESCRIPTION
 // 0x00 register offsets
 const SM_OFFSET: u16 = 11;
 const IT_OFFSET: u16 = 6;
-const SD_OFFSET: u16 = 0;
+// const SD_OFFSET: u16 = 0;
+
 // 0x03 register offsets
 const PSM_OFFSET: u16 = 1;
 const PSM_EN_OFFSET: u16 = 0;

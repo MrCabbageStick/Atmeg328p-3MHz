@@ -3,17 +3,15 @@ use core::cell::Cell;
 use arduino_hal::pac::TC2;
 use avr_device::interrupt::{self, Mutex};
 
-static mut TIMER2_FLAG: Mutex<Cell<bool>> = Mutex::new(Cell::new(false));
+static TIMER2_FLAG: Mutex<Cell<bool>> = Mutex::new(Cell::new(false));
 
-pub fn should_tick() -> bool {
+pub fn should_transmitter_tick() -> bool {
     let mut flag = false;
 
-    unsafe{
-            interrupt::free(|cs|{
-            flag = TIMER2_FLAG.borrow(cs).get();
-            TIMER2_FLAG.borrow(cs).set(false);
-        });
-    }
+    interrupt::free(|cs|{
+        flag = TIMER2_FLAG.borrow(cs).get();
+        TIMER2_FLAG.borrow(cs).set(false);
+    });
 
     flag
 }
@@ -35,9 +33,7 @@ pub fn setup_timer_2(tc2: TC2){
 #[avr_device::interrupt(atmega328p)]
 fn TIMER2_COMPA(){
     interrupt::free(|cs| {
-        unsafe{
-            let flag = TIMER2_FLAG.borrow(cs);
-            flag.set(true);
-        }
+        let flag = TIMER2_FLAG.borrow(cs);
+        flag.set(true);
     });
 }

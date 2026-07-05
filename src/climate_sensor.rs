@@ -1,8 +1,8 @@
 use arduino_hal::{Adc, adc::AdcChannel, i2c};
-use embedded_hal::{delay::DelayNs, digital::InputPin};
+use embedded_hal::delay::DelayNs;
 use ufmt::derive::uDebug;
 
-use crate::{data_handling::{labeled_readout::LabeledReadout, static_labeled_readout::{Barometer, Higrometer, Luxmeter, SensorId0, SensorId1, SensorId2, Thermometer, TypedLabelReadout, UnitScale1_100, UnitScale1_1000, Voltmeter}}, drivers::{aht20::{Aht20, Aht20Error}, bmp280::{self, driver::{Bmp280, Bmp280ReadError}}, veml7700::{self, driver::Veml7700}}, resistor_divider};
+use crate::{data_handling::{labeled_readout::LabeledReadout, static_labeled_readout::{Barometer, Higrometer, Luxmeter, SensorId0, SensorId1, SensorId2, Thermometer, TypedLabelReadout, UnitScale1_100, UnitScale1_1000, Voltmeter}}, drivers::{aht20::{Aht20, Aht20Error}, bmp280::{self, driver::{Bmp280, Bmp280ReadError}}, veml7700::{self, driver::Veml7700}}, util::voltage_divider};
 
 const BMP280_ADDR: u8 = 0x77;
 const VEML7700_ADDR: u8 = 0x10;
@@ -140,8 +140,8 @@ where VemlConfig: veml7700::config::Config,
     }
 
     pub fn get_charge_info(&mut self, adc: &mut Adc) -> ChargeInfo{
-        let sum_mv = resistor_divider::read_voltage_divider_mv::<100_000,1_000_000,3300, _>(&mut self.sum_capacitor, adc);
-        let other_mv = resistor_divider::read_voltage_divider_mv::<1_000_000, 100_000,3300, _>(&mut self.capacitor_2_pin, adc);
+        let sum_mv = voltage_divider::read_voltage_divider_mv::<100_000,1_000_000,3300, _>(&mut self.sum_capacitor, adc);
+        let other_mv = voltage_divider::read_voltage_divider_mv::<1_000_000, 100_000,3300, _>(&mut self.capacitor_2_pin, adc);
 
         ChargeInfo { sum_mv, first_mv: sum_mv - other_mv, second_mv: other_mv }
     }
