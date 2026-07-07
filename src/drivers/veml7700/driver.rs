@@ -47,12 +47,12 @@ impl<CONFIG: Config> Veml7700<CONFIG>{
 
         let raw = u16::from_le_bytes([buffer[0], buffer[1]]);
 
-        Ok(Self::raw_to_lux(raw))
+        Ok(Self::raw_to_lux::<100>(raw))
     }
 
-    fn raw_to_lux(raw: u16) -> u32{
+    fn raw_to_lux<const ACCURACY: u32>(raw: u16) -> u32{
         // Scaled conversion function from datasheet
         // Scaled to avoid floating point arithmetics
-        (raw as u32 * Self::LUX_NUM) / Self::LUX_DEN
+        (raw as u32 * Self::LUX_NUM) * ACCURACY / Self::LUX_DEN
     }
 }

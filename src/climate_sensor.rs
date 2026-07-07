@@ -93,7 +93,7 @@ where VemlConfig: veml7700::config::Config,
         }
         {
             let data = self.bmp280.read(&mut self.i2c)?;
-            let temp = TypedLabelReadout::<SensorId1, UnitScale1_1000, Thermometer>::new(data.temperature as u32);
+            let temp = TypedLabelReadout::<SensorId1, UnitScale1_100, Thermometer>::new(data.temperature as u32);
             let pres = TypedLabelReadout::<SensorId0, UnitScale1_1000, Barometer>::new(data.pressure);
 
             output[10..15].copy_from_slice(&temp.get_bytes());

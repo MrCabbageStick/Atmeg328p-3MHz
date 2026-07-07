@@ -94,10 +94,19 @@ impl<CONFIG: Config> Bmp280<CONFIG>{
         Ok(p as u32)
     }
 
+    pub fn convert_from_q24_8(value: u32) -> u32{
+        const ACCURACY: u32 = 1000;
+        let fraction = ((value & 0xff) * ACCURACY) >> 8;
+
+        (value >> 8) * ACCURACY + fraction
+    }
+
     pub fn read(&self, i2c: &mut I2c) -> Result<Bmp280Data, Bmp280ReadError>{
         let raw = self.read_raw(i2c)?;
         let (temperature, fine_temp) = self.convert_raw_temp(raw.temperature)?;
-        let pressure = self.convert_raw_pressure(raw.pressure, fine_temp)?;
+        let pressure = Self::convert_from_q24_8(
+            self.convert_raw_pressure(raw.pressure, fine_temp)?
+        );
 
         Ok(Bmp280Data { temperature, pressure })
     } 
