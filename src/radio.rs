@@ -21,10 +21,10 @@ pub fn setup_timer_2(tc2: &TC2){
     tc2.tccr2a().write(|w| w.wgm2().ctc());
 
     // Prescaler
-    tc2.tccr2b().write(|w| w.cs2().prescale_128());
+    tc2.tccr2b().write(|w| w.cs2().prescale_8());
 
     unsafe{
-        tc2.ocr2a().write(|w| w.bits(127));
+        tc2.ocr2a().write(|w| w.bits(64));
     }
 
     tc2.timsk2().write(|w| w.ocie2a().set_bit());
