@@ -481,7 +481,7 @@ checksum = "42f5e15c9953c5e4ccceeb2e7382a716482c34515315f7b03532b8b4e8393d2d"
 [[package]]
 name = "ook-433mhz"
 version = "0.1.0"
-source = "git+https://github.com/MrCabbageStick/OOK-433MHz.git?rev=f0ad1e9#f0ad1e9f55aca596e46376635ef665e468b4fab9"
+source = "git+https://github.com/MrCabbageStick/OOK-433MHz.git?rev=56c901c#56c901cbd2210a7092b7a7fa4586dd9d592c86b0"
 dependencies = [
  "embedded-hal 0.2.7",
  "heapless",
