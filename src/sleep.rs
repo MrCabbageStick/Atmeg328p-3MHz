@@ -3,8 +3,8 @@ use core::cell::Cell;
 use arduino_hal::pac::{CPU, WDT};
 use avr_device::interrupt;
 
-// Sleep for ~15 minutes
-const WAKE_CYCLES: u8 = 113;
+// Sleep for ~7,5 minutes
+const WAKE_CYCLES: u8 = 57;
 static WDT_COUNT: interrupt::Mutex<Cell<u8>> = interrupt::Mutex::new(Cell::new(WAKE_CYCLES));
 
 
