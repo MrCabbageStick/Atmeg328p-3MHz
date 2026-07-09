@@ -140,7 +140,7 @@ where VemlConfig: veml7700::config::Config,
     }
 
     pub fn get_charge_info(&mut self, adc: &mut Adc) -> ChargeInfo{
-        let sum_mv = voltage_divider::read_voltage_divider_mv::<100_000,1_000_000,3300, _>(&mut self.sum_capacitor, adc);
+        let sum_mv = voltage_divider::read_voltage_divider_mv::<1_000_000,100_000, 3300, _>(&mut self.sum_capacitor, adc);
         let other_mv = voltage_divider::read_voltage_divider_mv::<100_000, 1_000_000,3300, _>(&mut self.capacitor_2_pin, adc);
 
         ChargeInfo { sum_mv, first_mv: sum_mv - other_mv, second_mv: other_mv }
