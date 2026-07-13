@@ -84,7 +84,7 @@ impl Config for ConfigFastLowPower{
 
     // Sensitivity is scaled by 1000
     const LUX_NUM: u32 = 10 * 1000;
-    // Sesitivity of 0.042 scaled scaled by 1000
+    // Sensitivity of 0.042 scaled by 1000
     // and refresh time of 600ms
     const LUX_DEN: u32 = 42 * 600;
 }

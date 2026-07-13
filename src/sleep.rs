@@ -4,7 +4,7 @@ use arduino_hal::pac::{CPU, WDT};
 use avr_device::interrupt;
 
 // Sleep for ~7,5 minutes
-const WAKE_CYCLES: u8 = 57;
+const WAKE_CYCLES: u8 = 8;
 static WDT_COUNT: interrupt::Mutex<Cell<u8>> = interrupt::Mutex::new(Cell::new(WAKE_CYCLES));
 
 
@@ -27,7 +27,7 @@ pub fn enable_peripherals(cpu: &CPU){
 
 pub fn disable_peripherals(cpu: &CPU) {
     // Power Reduction Register: shut off timers, USART, SPI, TWI, ADC clock.
-    cpu.prr().write(|w| unsafe { w.bits(0xFF) });
+    cpu.prr().write(|w| unsafe { w.bits(0b11111110) });
 }
 
 pub fn setup_wdt(cpu: &CPU, wdt: &WDT) {
