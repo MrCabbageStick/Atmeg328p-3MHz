@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_MASK, SENSOR_ID_OFFSET, SENSOR_TYPE_MASK, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_MASK, UNIT_SCALE_OFFSET, VOLTMETER_SENSOR_TYPE}};
+use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HYGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_MASK, SENSOR_ID_OFFSET, SENSOR_TYPE_MASK, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_MASK, UNIT_SCALE_OFFSET, VOLTMETER_SENSOR_TYPE}};
 
 pub struct TypedLabelReadout<ID, SCALE, TYPE>{
     data: u32,
@@ -89,7 +89,7 @@ pub struct Luxmeter;
 pub struct Voltmeter;
 
 impl SensorType for Thermometer{ const BITS: u8 = THERMOMETER_SENSOR_TYPE; }
-impl SensorType for Higrometer{ const BITS: u8 = HIGROMETER_SENSOR_TYPE; }
+impl SensorType for Higrometer{ const BITS: u8 = HYGROMETER_SENSOR_TYPE; }
 impl SensorType for Barometer{ const BITS: u8 = BAROMETER_SENSOR_TYPE; }
 impl SensorType for Luxmeter{ const BITS: u8 = LUXMETER_SENSOR_TYPE; }
 impl SensorType for Voltmeter{ const BITS: u8 = VOLTMETER_SENSOR_TYPE; }

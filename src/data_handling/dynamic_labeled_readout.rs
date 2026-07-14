@@ -1,6 +1,6 @@
 use ufmt::derive::uDebug;
 
-use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HIGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_MASK, SENSOR_ID_OFFSET, SENSOR_TYPE_MASK, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_MASK, UNIT_SCALE_OFFSET}};
+use crate::data_handling::labeled_readout::{LabeledReadout, consts::{BAROMETER_SENSOR_TYPE, HYGROMETER_SENSOR_TYPE, LUXMETER_SENSOR_TYPE, SENSOR_ID_MASK, SENSOR_ID_OFFSET, SENSOR_TYPE_MASK, SENSOR_TYPE_OFFSET, THERMOMETER_SENSOR_TYPE, UNIT_SCALE_MASK, UNIT_SCALE_OFFSET}};
 
 pub struct DynamicLabeledReadout{
     data: u32,
@@ -65,7 +65,7 @@ impl SensorType{
     pub fn get_bits(&self) -> u8{
         match self {
             Self::Thermometer => THERMOMETER_SENSOR_TYPE,
-            Self::Higrometer => HIGROMETER_SENSOR_TYPE,
+            Self::Higrometer => HYGROMETER_SENSOR_TYPE,
             Self::Barometer => BAROMETER_SENSOR_TYPE,
             Self::Luxmeter => LUXMETER_SENSOR_TYPE,
         }
@@ -74,7 +74,7 @@ impl SensorType{
     pub fn from_bits(bits: u8) -> Option<Self>{
         match bits{
             THERMOMETER_SENSOR_TYPE => Some(Self::Thermometer),
-            HIGROMETER_SENSOR_TYPE => Some(Self::Higrometer),
+            HYGROMETER_SENSOR_TYPE => Some(Self::Higrometer),
             BAROMETER_SENSOR_TYPE => Some(Self::Barometer),
             LUXMETER_SENSOR_TYPE => Some(Self::Luxmeter),
             _ => None,

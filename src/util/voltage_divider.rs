@@ -1,8 +1,26 @@
 use arduino_hal::{adc::{AdcChannel, Adc}};
 
+/// Maximal value returned from adc
 const ARDUINO_ADC_MAX: u32 = 1023;
 
-pub fn read_voltage_divider_mv<
+/// Calculates `Vin` for:
+/// ```text
+///  ┌── Vin  
+/// ┌┴┐        
+/// │ │R1    
+/// └┬┘      
+///  ├── Vout
+/// ┌┴┐      
+/// │ │R2    
+/// └┬┘      
+///  ┴       
+/// ```
+/// Where `Vout` is the voltage read from `pin`.
+///
+/// To determine the actual voltage on `pin`, this function uses
+/// `VREF_MV`, which should be set to the MCU's supply voltage
+/// (e.g. `3300` for 3.3 V or `5000` for 5 V).
+pub fn reverse_voltage_divider_mv<
     const R1: u32, 
     const R2: u32, 
     const VREF_MV: u32,
