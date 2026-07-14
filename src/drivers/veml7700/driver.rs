@@ -53,6 +53,7 @@ impl<CONFIG: Config> Veml7700<CONFIG>{
     fn raw_to_lux<const ACCURACY: u32>(raw: u16) -> u32{
         // Scaled conversion function from datasheet
         // Scaled to avoid floating point arithmetics
-        (raw as u32 * Self::LUX_NUM) * ACCURACY / Self::LUX_DEN
+        ((raw as u64 * Self::LUX_NUM as u64) 
+        * ACCURACY as u64 / Self::LUX_DEN as u64) as u32
     }
 }

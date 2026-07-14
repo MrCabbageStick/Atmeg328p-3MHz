@@ -89,7 +89,12 @@ fn WDT() {
     // Increment `WDT_COUNT`
     interrupt::free(|cs| {
         let cell = WDT_COUNT.borrow(cs);
-        cell.set(cell.get() + 1);
+
+        let value = cell.get();
+        
+        if value < u8::MAX{
+            cell.set(value + 1);
+        }
     });
 
     // Re-arm interrupt mode - hardware clears WDIE after firing.
